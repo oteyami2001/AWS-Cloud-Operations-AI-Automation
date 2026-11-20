@@ -1,0 +1,36 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+plan.txt
+crash.log
+terraform.tfvars
+*.auto.tfvars
+override.tf
+override.tf.json
+backend.tf
+.terraformrc
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+reports/
+
+# Build
+build/
+
+# Secrets / local
+.env
+*.pem
+.DS_Store
+
+# Provider lock files were generated from a single-platform mirror; regenerate with
+# `terraform providers lock -platform=linux_amd64 -platform=darwin_arm64` before committing.
+.terraform.lock.hcl

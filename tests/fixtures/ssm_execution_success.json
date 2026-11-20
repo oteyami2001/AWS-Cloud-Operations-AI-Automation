@@ -1,0 +1,15 @@
+{
+  "version": "0",
+  "id": "a1b2c3",
+  "detail-type": "EC2 Automation Execution Status-change Notification",
+  "source": "aws.ssm",
+  "account": "123456789012",
+  "time": "2026-11-20T15:20:00Z",
+  "region": "us-east-1",
+  "resources": [],
+  "detail": {
+    "ExecutionId": "exec-123",
+    "Definition": "aiops-dev-RestartEcsService",
+    "Status": "Success"
+  }
+}

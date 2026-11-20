@@ -1,0 +1,36 @@
+description: |-
+  ## AIOps - Scale out ECS service (risk: MEDIUM)
+  Raises the desired count to the approved maximum. Bounded by allowedValues.
+schemaVersion: '0.3'
+assumeRole: '{{ AutomationAssumeRole }}'
+parameters:
+  ClusterName:
+    type: String
+    allowedPattern: '^[A-Za-z0-9_-]{1,255}$'
+  ServiceName:
+    type: String
+    allowedPattern: '^[A-Za-z0-9_-]{1,255}$'
+  DesiredCount:
+    type: String
+    allowedValues: ['2', '3', '4']
+  AutomationAssumeRole:
+    type: AWS::IAM::Role::Arn
+mainSteps:
+  - name: ScaleOut
+    action: aws:executeAwsApi
+    inputs:
+      Service: ecs
+      Api: UpdateService
+      cluster: '{{ ClusterName }}'
+      service: '{{ ServiceName }}'
+      desiredCount: '{{ DesiredCount }}'
+  - name: WaitForSteadyState
+    action: aws:waitForAwsResourceProperty
+    timeoutSeconds: 600
+    inputs:
+      Service: ecs
+      Api: DescribeServices
+      cluster: '{{ ClusterName }}'
+      services: ['{{ ServiceName }}']
+      PropertySelector: '$.services[0].deployments[0].rolloutState'
+      DesiredValues: ['COMPLETED']

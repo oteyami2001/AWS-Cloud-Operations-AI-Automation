@@ -1,0 +1,10 @@
+# Remote state (after `terraform -chdir=terraform/bootstrap apply`). Copy to backend.tf.
+terraform {
+  backend "s3" {
+    bucket         = "REPLACE-aiops-tfstate-<account-id>"
+    key            = "envs/dev/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "aiops-tf-locks"
+    encrypt        = true
+  }
+}

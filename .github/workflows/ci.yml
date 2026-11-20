@@ -1,0 +1,146 @@
+# Runs on every push / PR. Needs NO AWS credentials and deploys nothing.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_VERSION: 1.9.8
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  python:
+    name: Python - lint, security scan, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Ruff lint + format check
+        run: |
+          ruff check src tests scripts
+          ruff format --check src tests scripts
+      - name: Bandit (SAST)
+        run: bandit -c pyproject.toml -r src scripts
+      - name: Pytest + coverage (fails under 85%)
+        run: |
+          mkdir -p reports
+          pytest --cov --cov-report=term --cov-report=xml:reports/coverage.xml --junitxml=reports/junit.xml
+      - name: Offline end-to-end incident simulation
+        run: python scripts/local_demo.py | tee reports/incident-simulation.md
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Unit tests"
+            python - <<'PY'
+          import xml.etree.ElementTree as ET
+          s = ET.parse("reports/junit.xml").getroot()
+          s = s if s.tag == "testsuite" else s[0]
+          print(f"tests={s.get('tests')} failures={s.get('failures')} errors={s.get('errors')} skipped={s.get('skipped')} time={s.get('time')}s")
+          c = ET.parse("reports/coverage.xml").getroot()
+          print(f"\nline coverage: {float(c.get('line-rate')) * 100:.1f}%")
+          PY
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-test-reports
+          path: reports/
+
+  terraform:
+    name: Terraform - fmt, validate, tflint, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: terraform fmt
+        run: terraform -chdir=terraform fmt -check -recursive -diff
+      - name: Build Lambda package (code only)
+        run: NO_DEPS=1 scripts/build_lambda.sh
+      - name: validate + test (envs/dev)
+        working-directory: terraform/envs/dev
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+          terraform test
+      - name: validate + test (modules/aiops guardrails)
+        working-directory: terraform/modules/aiops
+        run: |
+          terraform init -backend=false -input=false
+          terraform test
+      - name: validate (bootstrap)
+        working-directory: terraform/bootstrap
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.53.0
+      - name: tflint
+        run: |
+          tflint --init --config "$GITHUB_WORKSPACE/.tflint.hcl"
+          tflint --recursive --config "$GITHUB_WORKSPACE/.tflint.hcl" --chdir terraform
+
+  checkov:
+    name: Checkov - IaC security scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          framework: terraform
+          quiet: true
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+          # Findings without an inline, justified skip fail the build.
+          soft_fail: false
+          download_external_modules: false
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('checkov.sarif') != ''
+        with:
+          sarif_file: checkov.sarif
+          category: checkov
+
+  container:
+    name: Container - build + scan sample app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t aiops-sample-app:ci src/sample_app
+      - name: Smoke test
+        run: |
+          docker run -d --name app -p 8080:8080 --read-only -e FAULT_TOKEN=ci aiops-sample-app:ci
+          for i in $(seq 1 20); do curl -fsS localhost:8080/health && break; sleep 1; done
+          curl -fsS -X POST -H 'X-Fault-Token: ci' localhost:8080/fault/unhealthy
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/health)" = 503
+          docker rm -f app
+      - name: Trivy scan (HIGH/CRITICAL, fixed only)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: aiops-sample-app:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

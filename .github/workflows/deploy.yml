@@ -1,0 +1,115 @@
+# Manual, approval-gated deployment. Nothing here runs automatically.
+#
+# Prerequisites (see docs/deployment.md):
+#   1. terraform/bootstrap applied (state bucket, lock table, OIDC roles)
+#   2. Repository variables: AWS_REGION, TF_STATE_BUCKET, AWS_PLAN_ROLE_ARN, AWS_APPLY_ROLE_ARN, ALLOWED_INGRESS_CIDR
+#   3. GitHub environment "aws-dev" with required reviewers (the apply role trusts ONLY this environment)
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: plan, apply or destroy
+        type: choice
+        options: [plan, apply, destroy]
+        default: plan
+      image_tag:
+        description: Sample app image tag to build/deploy
+        default: v1
+
+permissions:
+  contents: read
+  id-token: write # OIDC - no long-lived AWS keys in GitHub
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: 1.9.8
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_allowed_ingress_cidrs: '["${{ vars.ALLOWED_INGRESS_CIDR }}"]'
+  TF_VAR_image_tag: ${{ inputs.image_tag }}
+
+jobs:
+  plan:
+    name: terraform plan (read-only role)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: scripts/build_lambda.sh
+      - name: terraform plan
+        working-directory: terraform/envs/dev
+        run: |
+          cp backend.tf.example backend.tf # bucket/table overridden below
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=envs/dev/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="dynamodb_table=aiops-tf-locks"
+          if [ "${{ inputs.action }}" = "destroy" ]; then DESTROY="-destroy"; fi
+          terraform plan -input=false ${DESTROY:-} -out=tfplan -no-color | tee plan.txt
+      - name: Plan summary
+        working-directory: terraform/envs/dev
+        run: |
+          { echo '### terraform plan'; echo '```'; grep -E '^Plan:|No changes' plan.txt || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: |
+            terraform/envs/dev/tfplan
+            terraform/envs/dev/plan.txt
+            build/lambda.zip
+
+  apply:
+    name: terraform ${{ inputs.action }} (requires environment approval)
+    needs: plan
+    if: inputs.action != 'plan'
+    runs-on: ubuntu-latest
+    environment: aws-dev # required reviewers = human approval before any billable change
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+      - name: Build and push sample app image
+        if: inputs.action == 'apply'
+        run: |
+          REPO="$(aws ecr describe-repositories --repository-names aiops-dev-sample-app --query 'repositories[0].repositoryUri' --output text 2>/dev/null || true)"
+          if [ -n "$REPO" ] && [ "$REPO" != "None" ]; then
+            aws ecr get-login-password | docker login --username AWS --password-stdin "${REPO%%/*}"
+            if ! aws ecr describe-images --repository-name aiops-dev-sample-app --image-ids imageTag=${{ inputs.image_tag }} >/dev/null 2>&1; then
+              docker build -t "$REPO:${{ inputs.image_tag }}" src/sample_app
+              docker push "$REPO:${{ inputs.image_tag }}"
+            fi
+          else
+            echo "ECR repo not created yet - first apply creates it; re-run apply to push the image."
+          fi
+      - name: terraform apply (saved plan)
+        working-directory: terraform/envs/dev
+        run: |
+          cp backend.tf.example backend.tf # bucket/table overridden below
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=envs/dev/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="dynamodb_table=aiops-tf-locks"
+          terraform apply -input=false tfplan

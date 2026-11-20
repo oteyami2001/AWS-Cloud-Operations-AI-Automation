@@ -1,0 +1,164 @@
+# Runs on every push / PR. Needs NO AWS credentials and deploys nothing.
+# Third-party actions are pinned to full commit SHAs (tag in the trailing comment); tags are mutable
+# and have been hijacked in real supply-chain attacks.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_VERSION: 1.17.2
+  TFLINT_VERSION: v0.59.1
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  python:
+    name: Python - lint, SAST, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Ruff lint + format check
+        run: |
+          ruff check src tests scripts
+          ruff format --check src tests scripts
+      - name: Bandit (SAST)
+        run: bandit -c pyproject.toml -r src scripts
+      - name: Pytest + coverage (fails under 85%)
+        run: |
+          mkdir -p reports
+          pytest --cov --cov-report=term --cov-report=xml:reports/coverage.xml --junitxml=reports/junit.xml
+      - name: Offline end-to-end incident simulation
+        run: python scripts/local_demo.py | tee reports/incident-simulation.md
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Unit tests"
+            python - <<'PY'
+          import xml.etree.ElementTree as ET
+          s = ET.parse("reports/junit.xml").getroot()
+          s = s if s.tag == "testsuite" else s[0]
+          print(f"tests={s.get('tests')} failures={s.get('failures')} errors={s.get('errors')} skipped={s.get('skipped')} time={s.get('time')}s")
+          c = ET.parse("reports/coverage.xml").getroot()
+          print(f"\nline coverage: {float(c.get('line-rate')) * 100:.1f}%")
+          PY
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: python-test-reports
+          path: reports/
+
+  terraform:
+    name: Terraform - fmt, validate, tests, tflint
+    runs-on: ubuntu-latest
+    env:
+      CHECKPOINT_DISABLE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: terraform fmt
+        run: terraform -chdir=terraform fmt -check -recursive -diff
+      - name: validate + offline tests (mocked providers, no AWS)
+        run: |
+          set -euo pipefail
+          for d in bootstrap envs/dev modules/aiops modules/workload; do
+            echo "::group::$d"
+            terraform -chdir="terraform/$d" init -backend=false -input=false
+            terraform -chdir="terraform/$d" validate
+            if ls terraform/$d/tests/*.tftest.hcl >/dev/null 2>&1; then
+              terraform -chdir="terraform/$d" test
+            fi
+            echo "::endgroup::"
+          done
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+      - name: tflint
+        env:
+          # Authenticated GitHub API calls for plugin download (unauthenticated calls hit rate limits).
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          tflint --init --config "$GITHUB_WORKSPACE/.tflint.hcl"
+          tflint --recursive --config "$GITHUB_WORKSPACE/.tflint.hcl" --chdir terraform --format compact
+
+  checkov:
+    name: Checkov - IaC security scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@b17b606d6ec72bb8ba5721ad5b7e340b80a9fc39 # v12.3142.0
+        with:
+          directory: terraform
+          framework: terraform
+          quiet: true
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+          soft_fail: false # any finding without an inline, justified skip fails the build
+          download_external_modules: false
+      - uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
+        if: always() && hashFiles('checkov.sarif') != ''
+        with:
+          sarif_file: checkov.sarif
+          category: checkov
+
+  container:
+    name: Container - build, smoke test, Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build image
+        run: docker build -t aiops-sample-app:ci src/sample_app
+      - name: Smoke test (read-only root filesystem, non-root)
+        run: |
+          docker run -d --name app -p 8080:8080 --read-only -e FAULT_TOKEN=ci aiops-sample-app:ci
+          for i in $(seq 1 20); do curl -fsS localhost:8080/health && break; sleep 1; done
+          test "$(docker exec app id -u)" = "10001"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8080/fault/unhealthy)" = 403
+          curl -fsS -X POST -H 'X-Fault-Token: ci' localhost:8080/fault/unhealthy
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/health)" = 503
+          docker rm -f app
+      - name: Trivy image scan (HIGH/CRITICAL with fixes available)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: aiops-sample-app:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Trivy config scan (Dockerfile + Terraform misconfigurations)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"

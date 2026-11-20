@@ -1,0 +1,24 @@
+............................................................             [100%]
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.18-final-0 _______________
+
+Name                                Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------
+src/aiops/__init__.py                   1      0   100%
+src/aiops/ai.py                        58      3    95%   76-78, 142
+src/aiops/events.py                    52      1    98%   52
+src/aiops/evidence.py                  78      8    90%   43, 52, 55, 80, 85, 100, 112, 122
+src/aiops/handlers/analyzer.py        102      9    91%   57, 77, 183-191
+src/aiops/handlers/dashboard.py        29      0   100%
+src/aiops/handlers/remediation.py      97      6    94%   55, 58-59, 61, 91, 115
+src/aiops/handlers/status.py           37      1    97%   45
+src/aiops/models.py                    90      0   100%
+src/aiops/platform.py                  54     11    80%   38-39, 77, 93-94, 97-104
+src/aiops/rules.py                     25      0   100%
+src/aiops/runbooks.py                  28      1    96%   94
+src/aiops/severity.py                  11      0   100%
+src/aiops/store.py                     57     11    81%   69-78, 83
+-----------------------------------------------------------------
+TOTAL                                 719     51    93%
+Coverage XML written to file docs/evidence/local/coverage.xml
+Required test coverage of 85.0% reached. Total coverage: 92.91%

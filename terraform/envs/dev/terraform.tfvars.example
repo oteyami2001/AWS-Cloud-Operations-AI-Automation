@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars (git-ignored) and edit.
+region                = "us-east-1"
+allowed_ingress_cidrs = ["203.0.113.10/32"] # YOUR public IP /32 (curl -s https://checkip.amazonaws.com)
+image_tag             = "v1"                # must already be pushed to ECR (plan fails otherwise)
+
+alert_email = "you@example.com" # SNS incident alerts; confirm the subscription e-mail
+
+# Bedrock stays OFF for the first deployment.
+bedrock_enabled = false
+
+# Human roles: principals allowed to assume operator / senior-approver (MFA required).
+trusted_principal_arns = []
+require_mfa            = true

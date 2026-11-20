@@ -1,0 +1,38 @@
+description: |-
+  ## AIOps - Restore ECS desired count (risk: MEDIUM)
+  Sets the service desired count back to the approved baseline (e.g. after the service was
+  stopped / scaled to zero). The value is bounded by allowedValues, so it cannot be abused to
+  scale the service arbitrarily.
+schemaVersion: '0.3'
+assumeRole: '{{ AutomationAssumeRole }}'
+parameters:
+  ClusterName:
+    type: String
+    allowedPattern: '^[A-Za-z0-9_-]{1,255}$'
+  ServiceName:
+    type: String
+    allowedPattern: '^[A-Za-z0-9_-]{1,255}$'
+  DesiredCount:
+    type: String
+    allowedValues: ['1', '2']
+  AutomationAssumeRole:
+    type: AWS::IAM::Role::Arn
+mainSteps:
+  - name: SetDesiredCount
+    action: aws:executeAwsApi
+    inputs:
+      Service: ecs
+      Api: UpdateService
+      cluster: '{{ ClusterName }}'
+      service: '{{ ServiceName }}'
+      desiredCount: '{{ DesiredCount }}'
+  - name: WaitForRunningTasks
+    action: aws:waitForAwsResourceProperty
+    timeoutSeconds: 600
+    inputs:
+      Service: ecs
+      Api: DescribeServices
+      cluster: '{{ ClusterName }}'
+      services: ['{{ ServiceName }}']
+      PropertySelector: '$.services[0].deployments[0].rolloutState'
+      DesiredValues: ['COMPLETED']

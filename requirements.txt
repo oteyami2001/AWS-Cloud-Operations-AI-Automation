@@ -1,0 +1,2 @@
+# Lambda runtime dependencies (packaged by scripts/build_lambda.sh). boto3 is provided by the runtime.
+anthropic==2.11.0

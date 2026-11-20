@@ -1,0 +1,47 @@
+description: |-
+  ## AIOps - Restart ECS service (risk: MEDIUM)
+  Forces a new deployment so every task of the service is replaced with a fresh copy of the
+  *same* task definition. Started only by the remediation-approval Lambda after a human approved it.
+schemaVersion: '0.3'
+assumeRole: '{{ AutomationAssumeRole }}'
+parameters:
+  ClusterName:
+    type: String
+    allowedPattern: '^[A-Za-z0-9_-]{1,255}$'
+  ServiceName:
+    type: String
+    allowedPattern: '^[A-Za-z0-9_-]{1,255}$'
+  AutomationAssumeRole:
+    type: AWS::IAM::Role::Arn
+mainSteps:
+  - name: RecordCurrentState
+    action: aws:executeAwsApi
+    inputs:
+      Service: ecs
+      Api: DescribeServices
+      cluster: '{{ ClusterName }}'
+      services: ['{{ ServiceName }}']
+    outputs:
+      - Name: TaskDefinition
+        Selector: '$.services[0].taskDefinition'
+        Type: String
+  - name: ForceNewDeployment
+    action: aws:executeAwsApi
+    inputs:
+      Service: ecs
+      Api: UpdateService
+      cluster: '{{ ClusterName }}'
+      service: '{{ ServiceName }}'
+      forceNewDeployment: true
+  - name: WaitForSteadyState
+    action: aws:waitForAwsResourceProperty
+    timeoutSeconds: 900
+    inputs:
+      Service: ecs
+      Api: DescribeServices
+      cluster: '{{ ClusterName }}'
+      services: ['{{ ServiceName }}']
+      PropertySelector: '$.services[0].deployments[0].rolloutState'
+      DesiredValues: ['COMPLETED']
+outputs:
+  - RecordCurrentState.TaskDefinition

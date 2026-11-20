@@ -1,0 +1,21 @@
+{
+  "label": "local-sample-app",
+  "target": "http://127.0.0.1:18080/work?ms=5",
+  "started_utc": "2026-11-20T15:53:36+00:00",
+  "duration_s": 21.0,
+  "concurrency": 10,
+  "requests": 3469,
+  "throughput_rps": 165.0,
+  "status_codes": {
+    "200": 3469
+  },
+  "error_rate_pct": 0.0,
+  "latency_ms": {
+    "p50": 39.8,
+    "p90": 50.6,
+    "p95": 55.8,
+    "p99": 1054.2,
+    "max": 3128.3,
+    "mean": 58.3
+  }
+}

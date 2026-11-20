@@ -1,0 +1,86 @@
+description: |-
+  ## AIOps - Roll back ECS task definition (risk: HIGH)
+  Rolls the service back to the previous ACTIVE revision of its task-definition family.
+  The first step is aws:approve: Systems Manager pauses the execution until a SECOND human
+  (a principal listed in Approvers, distinct from the operator who requested the run) approves.
+schemaVersion: '0.3'
+assumeRole: '{{ AutomationAssumeRole }}'
+parameters:
+  ClusterName:
+    type: String
+    allowedPattern: '^[A-Za-z0-9_-]{1,255}$'
+  ServiceName:
+    type: String
+    allowedPattern: '^[A-Za-z0-9_-]{1,255}$'
+  Approvers:
+    type: StringList
+    description: IAM ARNs allowed to give the second approval.
+  AutomationAssumeRole:
+    type: AWS::IAM::Role::Arn
+mainSteps:
+  - name: SecondApproval
+    action: aws:approve
+    timeoutSeconds: 3600
+    onFailure: Abort
+    inputs:
+      Message: 'HIGH RISK: roll back {{ ServiceName }} to its previous task definition revision?'
+      MinRequiredApprovals: 1
+      Approvers: '{{ Approvers }}'
+  - name: GetCurrentTaskDefinition
+    action: aws:executeAwsApi
+    inputs:
+      Service: ecs
+      Api: DescribeServices
+      cluster: '{{ ClusterName }}'
+      services: ['{{ ServiceName }}']
+    outputs:
+      - Name: TaskDefinitionArn
+        Selector: '$.services[0].taskDefinition'
+        Type: String
+  - name: FindPreviousRevision
+    action: aws:executeAwsApi
+    inputs:
+      Service: ecs
+      Api: DescribeTaskDefinition
+      taskDefinition: '{{ GetCurrentTaskDefinition.TaskDefinitionArn }}'
+    outputs:
+      - Name: Family
+        Selector: '$.taskDefinition.family'
+        Type: String
+      - Name: Revision
+        Selector: '$.taskDefinition.revision'
+        Type: Integer
+  - name: ListRevisions
+    action: aws:executeAwsApi
+    inputs:
+      Service: ecs
+      Api: ListTaskDefinitions
+      familyPrefix: '{{ FindPreviousRevision.Family }}'
+      status: ACTIVE
+      sort: DESC
+      maxResults: 2
+    outputs:
+      - Name: PreviousArn
+        Selector: '$.taskDefinitionArns[1]'
+        Type: String
+  - name: RollBack
+    action: aws:executeAwsApi
+    inputs:
+      Service: ecs
+      Api: UpdateService
+      cluster: '{{ ClusterName }}'
+      service: '{{ ServiceName }}'
+      taskDefinition: '{{ ListRevisions.PreviousArn }}'
+  - name: WaitForSteadyState
+    action: aws:waitForAwsResourceProperty
+    timeoutSeconds: 900
+    inputs:
+      Service: ecs
+      Api: DescribeServices
+      cluster: '{{ ClusterName }}'
+      services: ['{{ ServiceName }}']
+      PropertySelector: '$.services[0].deployments[0].rolloutState'
+      DesiredValues: ['COMPLETED']
+outputs:
+  - GetCurrentTaskDefinition.TaskDefinitionArn
+  - ListRevisions.PreviousArn

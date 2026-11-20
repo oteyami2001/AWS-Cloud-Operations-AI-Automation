@@ -1,0 +1,22 @@
+{
+  "version": "0",
+  "id": "3317b2af-7005-947d-b652-f55e762e571a",
+  "detail-type": "ECS Task State Change",
+  "source": "aws.ecs",
+  "account": "123456789012",
+  "time": "2026-11-20T15:06:00Z",
+  "region": "us-east-1",
+  "resources": ["arn:aws:ecs:us-east-1:123456789012:task/aiops-dev-cluster/abc123"],
+  "detail": {
+    "clusterArn": "arn:aws:ecs:us-east-1:123456789012:cluster/aiops-dev-cluster",
+    "taskArn": "arn:aws:ecs:us-east-1:123456789012:task/aiops-dev-cluster/abc123",
+    "group": "service:aiops-dev-app",
+    "lastStatus": "STOPPED",
+    "desiredStatus": "STOPPED",
+    "stopCode": "EssentialContainerExited",
+    "stoppedReason": "Essential container in task exited",
+    "stoppedAt": "2026-11-20T15:05:59Z",
+    "taskDefinitionArn": "arn:aws:ecs:us-east-1:123456789012:task-definition/aiops-dev-app:7",
+    "containers": [{"name": "app", "exitCode": 137, "lastStatus": "STOPPED"}]
+  }
+}

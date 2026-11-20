@@ -26,6 +26,7 @@ data "aws_iam_policy_document" "human_assume" {
 }
 
 resource "aws_iam_role" "operator" {
+  permissions_boundary = var.permissions_boundary_arn
   name                 = local.operator_role_name
   assume_role_policy   = data.aws_iam_policy_document.human_assume.json
   max_session_duration = 3600
@@ -71,6 +72,7 @@ resource "aws_iam_role_policy_attachment" "operator_cw_read" {
 }
 
 resource "aws_iam_role" "senior_approver" {
+  permissions_boundary = var.permissions_boundary_arn
   name                 = "${var.name_prefix}-senior-approver"
   assume_role_policy   = data.aws_iam_policy_document.human_assume.json
   max_session_duration = 3600

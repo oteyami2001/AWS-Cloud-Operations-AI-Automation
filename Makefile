@@ -2,7 +2,7 @@
 TF_DEV := terraform -chdir=terraform/envs/dev
 PY     ?= python3
 
-.PHONY: help install lint test tf-fmt tf-validate tf-test checkov demo-local load-test-local evidence \
+.PHONY: help install lint test tf-fmt tf-validate tf-test tflint trivy checkov demo-local load-test-local evidence \
         build push-image plan deploy destroy
 
 help:
@@ -22,13 +22,21 @@ test: ## Unit/integration tests with coverage gate (local, no AWS)
 tf-fmt: ## terraform fmt check
 	terraform -chdir=terraform fmt -check -recursive
 
-tf-validate: build ## terraform validate (local, no AWS)
-	$(TF_DEV) init -backend=false -input=false >/dev/null && $(TF_DEV) validate
-	terraform -chdir=terraform/bootstrap init -backend=false -input=false >/dev/null && terraform -chdir=terraform/bootstrap validate
+TF_TEST_DIRS := bootstrap envs/dev modules/aiops modules/workload
+
+tf-validate: ## terraform validate (local, no AWS)
+	@for d in $(TF_TEST_DIRS); do terraform -chdir=terraform/$$d init -backend=false -input=false >/dev/null && \
+	  echo "$$d: $$(terraform -chdir=terraform/$$d validate -no-color | head -1)" || exit 1; done
 
 tf-test: ## Offline terraform tests with mocked providers (local, no AWS)
-	$(TF_DEV) test
-	terraform -chdir=terraform/modules/aiops init -backend=false -input=false >/dev/null && terraform -chdir=terraform/modules/aiops test
+	@for d in $(TF_TEST_DIRS); do echo "== $$d"; terraform -chdir=terraform/$$d test || exit 1; done
+
+tflint: ## tflint (recommended preset + AWS ruleset)
+	tflint --init --config "$(CURDIR)/.tflint.hcl" && tflint --recursive --config "$(CURDIR)/.tflint.hcl" --chdir terraform
+
+trivy: ## Trivy config + filesystem (dependencies, secrets) scan
+	trivy config --quiet --severity HIGH,CRITICAL --exit-code 1 .
+	trivy fs --quiet --scanners vuln,secret,misconfig --severity HIGH,CRITICAL --skip-dirs build --exit-code 1 .
 
 checkov: ## IaC security scan
 	checkov -d terraform --framework terraform --quiet --compact
@@ -45,9 +53,9 @@ build: ## Build build/lambda.zip
 	scripts/build_lambda.sh
 
 # ---- AWS (billable) -------------------------------------------------------------------
-push-image: ## [AWS] Build and push the sample app image to ECR
-	@REPO=$$($(TF_DEV) output -raw ecr_repository_url); TAG=$${TAG:-v1}; \
-	aws ecr get-login-password | docker login --username AWS --password-stdin $${REPO%%/*} && \
+push-image: ## [AWS] Build and push the sample app image to the bootstrap ECR repository (TAG=v1)
+	@REPO=$$(terraform -chdir=terraform/bootstrap output -raw ecr_repository_url); TAG=$${TAG:-v1}; \
+	aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $${REPO%%/*} && \
 	docker build -t $$REPO:$$TAG src/sample_app && docker push $$REPO:$$TAG
 
 plan: build ## [AWS read-only] terraform plan

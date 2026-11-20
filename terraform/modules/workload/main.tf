@@ -3,32 +3,7 @@ data "aws_region" "current" {}
 
 locals {
   container_name = "app"
-  image          = var.container_image != "" ? var.container_image : "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
-}
-
-resource "aws_ecr_repository" "app" {
-  name                 = "${var.name_prefix}-sample-app"
-  image_tag_mutability = "IMMUTABLE"
-  force_delete         = true # lets the cleanup procedure remove the repo with images in it
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-  encryption_configuration {
-    encryption_type = "KMS"
-    kms_key         = var.kms_key_arn
-  }
-}
-
-resource "aws_ecr_lifecycle_policy" "app" {
-  repository = aws_ecr_repository.app.name
-  policy = jsonencode({
-    rules = [{
-      rulePriority = 1
-      description  = "Keep the last 10 images"
-      selection    = { tagStatus = "any", countType = "imageCountMoreThan", countNumber = 10 }
-      action       = { type = "expire" }
-    }]
-  })
+  image          = var.container_image
 }
 
 resource "aws_cloudwatch_log_group" "app" {
@@ -59,15 +34,16 @@ data "aws_iam_policy_document" "ecs_tasks_assume" {
 }
 
 resource "aws_iam_role" "execution" {
-  name               = "${var.name_prefix}-ecs-execution"
-  assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
+  permissions_boundary = var.permissions_boundary_arn
+  name                 = "${var.name_prefix}-ecs-execution"
+  assume_role_policy   = data.aws_iam_policy_document.ecs_tasks_assume.json
 }
 
 data "aws_iam_policy_document" "execution" {
   statement {
     sid       = "PullImage"
     actions   = ["ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage"]
-    resources = [aws_ecr_repository.app.arn]
+    resources = [var.ecr_repository_arn]
   }
   statement {
     sid       = "EcrAuth"
@@ -98,8 +74,9 @@ resource "aws_iam_role_policy" "execution" {
 
 # The app itself calls no AWS APIs, so its task role has no permissions.
 resource "aws_iam_role" "task" {
-  name               = "${var.name_prefix}-ecs-task"
-  assume_role_policy = data.aws_iam_policy_document.ecs_tasks_assume.json
+  permissions_boundary = var.permissions_boundary_arn
+  name                 = "${var.name_prefix}-ecs-task"
+  assume_role_policy   = data.aws_iam_policy_document.ecs_tasks_assume.json
 }
 
 # --- Task definition & service -------------------------------------------------
@@ -169,6 +146,7 @@ resource "aws_security_group" "tasks" {
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
   }
+  #trivy:ignore:AWS-0104 HTTPS-only egress to AWS APIs (ECR/Logs/Secrets Manager); no NAT/VPC endpoints for cost.
   egress {
     # checkov:skip=CKV_AWS_382:Tasks need HTTPS egress to ECR/Logs/Secrets Manager (no NAT/VPC endpoints for cost).
     description = "HTTPS to AWS APIs (ECR, Logs, Secrets Manager)"
@@ -179,6 +157,7 @@ resource "aws_security_group" "tasks" {
   }
 }
 
+#trivy:ignore:AWS-0053 Internet-facing by design; SG restricts ingress to the operator /32 (validated).
 resource "aws_lb" "this" {
   # checkov:skip=CKV_AWS_150:Deletion protection off so the documented cleanup procedure can destroy the demo.
   # checkov:skip=CKV_AWS_91:ALB access logs are optional for the demo (cost); enable for production.
@@ -211,6 +190,7 @@ resource "aws_lb_target_group" "app" {
   }
 }
 
+#trivy:ignore:AWS-0054 ACCEPTED RISK (see docs/security-review.md): HTTP-only demo, no domain/ACM cert; /32 ingress.
 resource "aws_lb_listener" "http" {
   # checkov:skip=CKV_AWS_2:HTTP-only demo listener (no domain/cert). Use HTTPS + ACM in production.
   # checkov:skip=CKV_AWS_103:See above.

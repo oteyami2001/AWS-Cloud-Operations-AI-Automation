@@ -1,10 +1,28 @@
 # dev environment: composes every module into the full platform.
 data "aws_caller_identity" "current" {}
 
+# Created by terraform/bootstrap (persistent, outside this destroyable environment).
+data "aws_iam_policy" "workload_boundary" {
+  name = "${var.project}-${var.environment}-workload-boundary"
+}
+
+data "aws_ecr_repository" "app" {
+  name = var.ecr_repository_name
+}
+
+# Fails the PLAN (before anything is created) if the image tag has not been pushed yet, and pins
+# the task definition to the immutable digest.
+data "aws_ecr_image" "app" {
+  repository_name = data.aws_ecr_repository.app.name
+  image_tag       = var.image_tag
+}
+
 locals {
   name_prefix = "${var.project}-${var.environment}"
   # Deterministic names break the monitoring <-> aiops dependency cycle.
   analyzer_function_name = "${local.name_prefix}-incident-analyzer"
+  boundary_arn           = data.aws_iam_policy.workload_boundary.arn
+  container_image        = "${data.aws_ecr_repository.app.repository_url}@${data.aws_ecr_image.app.image_digest}"
   dashboard_url          = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards/dashboard/${local.name_prefix}-operations"
 }
 
@@ -19,6 +37,8 @@ module "network" {
   cidr_block       = var.vpc_cidr
   enable_flow_logs = var.enable_flow_logs
   kms_key_arn      = module.security.kms_key_arn
+
+  permissions_boundary_arn = local.boundary_arn
 }
 
 module "workload" {
@@ -29,7 +49,9 @@ module "workload" {
   public_subnet_ids         = module.network.public_subnet_ids
   kms_key_arn               = module.security.kms_key_arn
   fault_token_secret_arn    = module.security.fault_token_secret_arn
-  container_image           = var.container_image
+  container_image           = local.container_image
+  ecr_repository_arn        = data.aws_ecr_repository.app.arn
+  permissions_boundary_arn  = local.boundary_arn
   image_tag                 = var.image_tag
   desired_count             = var.baseline_desired_count
   allowed_ingress_cidrs     = var.allowed_ingress_cidrs
@@ -49,15 +71,14 @@ module "monitoring" {
   analyzer_function_name  = local.analyzer_function_name
   dlq_name                = "${local.name_prefix}-events-dlq"
   alert_email             = var.alert_email
-  budget_email            = var.budget_email
-  monthly_budget_usd      = var.monthly_budget_usd
-  project_tag             = var.project
 }
 
 module "remediation" {
   source      = "../../modules/remediation"
   name_prefix = local.name_prefix
   service_arn = module.workload.service_arn
+
+  permissions_boundary_arn = local.boundary_arn
 }
 
 module "aiops" {
@@ -84,6 +105,7 @@ module "aiops" {
   trusted_principal_arns   = length(var.trusted_principal_arns) > 0 ? var.trusted_principal_arns : ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
   require_mfa              = var.require_mfa
   dashboard_url            = local.dashboard_url
+  permissions_boundary_arn = local.boundary_arn
 }
 
 module "dashboard" {

@@ -25,17 +25,18 @@ variable "vpc_cidr" {
 }
 
 variable "allowed_ingress_cidrs" {
-  description = "Who can reach the demo ALB. Set to [\"<your-ip>/32\"]."
+  description = "Your public IPv4 address as a /32 - the ONLY source allowed to reach the ALB."
   type        = list(string)
   validation {
-    condition     = length(var.allowed_ingress_cidrs) > 0
-    error_message = "Set allowed_ingress_cidrs explicitly (e.g. your IP /32)."
+    condition     = length(var.allowed_ingress_cidrs) > 0 && alltrue([for c in var.allowed_ingress_cidrs : can(cidrhost(c, 0)) && endswith(c, "/32")])
+    error_message = "allowed_ingress_cidrs must be one or more IPv4 /32 addresses, e.g. [\"203.0.113.10/32\"]."
   }
 }
 
-variable "container_image" {
-  type    = string
-  default = ""
+variable "ecr_repository_name" {
+  description = "ECR repository created by terraform/bootstrap."
+  type        = string
+  default     = "aiops-sample-app"
 }
 
 variable "image_tag" {
@@ -95,16 +96,7 @@ variable "require_mfa" {
 }
 
 variable "alert_email" {
-  type    = string
-  default = ""
-}
-
-variable "budget_email" {
-  type    = string
-  default = ""
-}
-
-variable "monthly_budget_usd" {
-  type    = number
-  default = 50
+  description = "E-mail for incident / platform alerts (SNS). Must be confirmed via the AWS e-mail."
+  type        = string
+  default     = ""
 }

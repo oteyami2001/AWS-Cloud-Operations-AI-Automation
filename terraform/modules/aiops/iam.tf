@@ -23,9 +23,10 @@ data "aws_iam_policy_document" "lambda_assume" {
 }
 
 resource "aws_iam_role" "fn" {
-  for_each           = local.functions
-  name               = "${each.value.name}-role"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
+  permissions_boundary = var.permissions_boundary_arn
+  for_each             = local.functions
+  name                 = "${each.value.name}-role"
+  assume_role_policy   = data.aws_iam_policy_document.lambda_assume.json
 }
 
 # --- shared baseline: own logs, X-Ray, DLQ, KMS --------------------------------------------

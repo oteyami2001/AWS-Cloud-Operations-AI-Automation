@@ -11,9 +11,9 @@ AI, and remediate safely, with a human approving every change.**
 > **Project status: be precise about this.**
 > | Layer | Status |
 > |---|---|
-> | Code, Terraform, tests, CI workflows, docs | ✅ Complete, and verified **locally**: 60 Python tests at ≈93% coverage, `terraform validate`, 10 offline `terraform test` assertions, and checkov with 0 failures |
+> | Code, Terraform, tests, CI workflows, docs | ✅ Complete, and verified **locally**: 60 Python tests at ≈93% coverage, 25 offline `terraform test` assertions, tflint, Checkov (0 failed) and Trivy (0 HIGH/CRITICAL). See [`docs/security-review.md`](docs/security-review.md) |
 > | Offline end-to-end incident simulation | ✅ [`docs/evidence/local/incident-simulation.md`](docs/evidence/local/incident-simulation.md) (mocked AWS) |
-> | AWS deployment, screenshots, Bedrock calls, ALB load test, video | ⏸️ **Not yet deployed.** Waiting for the owner's approval (billable). Checklist: [`docs/evidence/README.md`](docs/evidence/README.md) |
+> | AWS deployment, screenshots, Bedrock calls, ALB load test, video | ⏸️ **Not yet deployed.** The deployment plan is ready ([`docs/deployment-plan.md`](docs/deployment-plan.md)) and waits for the owner's approval (billable). Checklist: [`docs/evidence/README.md`](docs/evidence/README.md) |
 
 ---
 
@@ -77,7 +77,7 @@ make lint test
 ```
 
 ```bash
-make tf-validate tf-test checkov
+make tf-validate tf-test tflint checkov trivy
 ```
 
 ```bash
@@ -88,9 +88,9 @@ make demo-local
 stopped app → approved restore, unhealthy task → self-healed and auto-resolved, 5xx spike → HIGH-risk
 rollback waiting for a second approval.
 
-## Deploy to AWS (billable, ≈ $1.45/day)
+## Deploy to AWS (billable, ≈ $1.35/day while running)
 
-See [`docs/deployment.md`](docs/deployment.md): prerequisites, bootstrap, image push, plan and apply,
+See [`docs/deployment-plan.md`](docs/deployment-plan.md): the bootstrap (state, OIDC roles, ECR, budget), image publish, plan, the approval-gated apply,
 operator profiles, and how to enable Bedrock. Then follow the demo script in
 [`docs/demo-scenario.md`](docs/demo-scenario.md) and clean up with [`docs/cleanup.md`](docs/cleanup.md).
 
@@ -114,10 +114,10 @@ AWS_PROFILE=aiops-operator python scripts/approve.py --incident <INC-id> --decis
 | `src/sample_app/` | Monitored workload with token-protected fault injection, non-root Dockerfile |
 | `terraform/modules/` | `security` · `network` · `workload` · `monitoring` · `aiops` · `remediation` (SSM docs) · `dashboard` |
 | `terraform/envs/dev/` | Composition root, tfvars example, offline plan tests |
-| `terraform/bootstrap/` | State bucket, lock table, GitHub OIDC plan/apply roles with a permissions boundary |
+| `terraform/bootstrap/` | S3 state bucket (S3-native locking), GitHub OIDC plan / apply / image-push roles, workload permissions boundary, ECR repository, account budget |
 | `tests/` | pytest + moto tests and EventBridge event fixtures |
 | `scripts/` | build, approve (SigV4), simulate incidents, load test, offline demo |
-| `.github/workflows/` | `ci.yml` (no AWS access) and `deploy.yml` (manual, OIDC, approval-gated) |
+| `.github/workflows/` | `ci.yml` (no AWS access), `image.yml` (build, scan, push) and `deploy.yml` (manual, OIDC, approval-gated). All actions are pinned to commit SHAs |
 | `docs/` | ADR, architecture, cost, security, implementation plan, runbooks, evidence, talking points |
 
 ## CI/CD
@@ -125,14 +125,15 @@ AWS_PROFILE=aiops-operator python scripts/approve.py --incident <INC-id> --decis
 | Workflow | Trigger | Jobs |
 |---|---|---|
 | `ci` | push / PR | ruff, bandit, pytest + 85% coverage gate, offline incident simulation · terraform fmt/validate/test, tflint · checkov (SARIF to code scanning) · Docker build, read-only smoke test, Trivy |
-| `deploy` | manual | `plan` with the read-only OIDC role → `apply`/`destroy` only after a required reviewer approves the `aws-dev` environment |
+| `image` | manual, `main` | build → Trivy gate → push an immutable tag (image-push role) |
+| `deploy` | manual, `main` | `plan` with the read-only OIDC role → `apply`/`destroy` of that saved plan only after a required reviewer approves the `aws-dev` environment |
 
 ## Security, cost, operations
 
 - **Security:** least-privilege per-function IAM, a customer-managed KMS key for all data stores,
   logs, queues and topics, Secrets Manager, MFA-protected human roles, OIDC (no stored keys),
-  checkov/tflint/bandit/Trivy. Accepted demo-scope risks are listed in [`docs/security.md`](docs/security.md).
-- **Cost:** ≈ $43/month if left running, or ≈ $0.25–$0.50 per 2–4 h demo session. Includes an AWS Budget, cost-allocation
+  checkov/tflint/bandit/Trivy. Pre-deployment review, including every accepted risk: [`docs/security-review.md`](docs/security-review.md).
+- **Cost:** ≈ $38–43/month if left running, or ≈ $0.20–0.35 per demo session under 3 hours. Includes an AWS Budget, cost-allocation
   tags, a Bedrock daily call cap, reserved concurrency, and no NAT gateway. See [`docs/cost-estimate.md`](docs/cost-estimate.md).
 - **Operations:** [`docs/runbooks/operator-runbook.md`](docs/runbooks/operator-runbook.md), platform
   self-monitoring alarms (analyzer errors, DLQ), EMF metrics (incidents opened/resolved, time to recover), X-Ray.

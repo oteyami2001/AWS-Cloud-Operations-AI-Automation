@@ -20,3 +20,9 @@ variable "log_retention_days" {
 variable "kms_key_arn" {
   type = string
 }
+
+variable "permissions_boundary_arn" {
+  description = "Permissions boundary attached to every IAM role in this module (from terraform/bootstrap)."
+  type        = string
+  default     = null
+}

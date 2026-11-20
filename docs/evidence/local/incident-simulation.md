@@ -6,16 +6,16 @@ recorded evidence, rules engine (Bedrock disabled). See docs/evidence/README.md 
 ## Scenario A - test application stopped (ECS desired count = 0)
 
 > SNS notification: **[SEV1] NO_HEALTHY_TARGETS on aiops-dev-app**
-> analyzer: `{"action": "opened", "incident_id": "INC-20261120-fe595101", "severity": "SEV1", "engine": "rules", "recommended_runbook": "restore-ecs-desired-count"}`
+> analyzer: `{"action": "opened", "incident_id": "INC-20261120-d89515d5", "severity": "SEV1", "engine": "rules", "recommended_runbook": "restore-ecs-desired-count"}`
 > SSM StartAutomationExecution `aiops-dev-RestoreEcsDesiredCount` params={"ClusterName": ["aiops-dev-cluster"], "ServiceName": ["aiops-dev-app"], "AutomationAssumeRole": ["arn:aws:iam::123456789012:role/aiops-dev-ssm-automation"], "DesiredCount": ["1"]}
-> SNS notification: **Remediation started for INC-20261120-fe595101**
-> approval: `{"incident_id": "INC-20261120-fe595101", "status": "REMEDIATING", "execution_id": "exec-local-1", "runbook_id": "restore-ecs-desired-count", "risk": "MEDIUM"}`
-> SNS notification: **Remediation Success: INC-20261120-fe595101**
-> status: `{"action": "updated", "incident_id": "INC-20261120-fe595101", "status": "RESOLVED"}`
+> SNS notification: **Remediation started for INC-20261120-d89515d5**
+> approval: `{"incident_id": "INC-20261120-d89515d5", "status": "REMEDIATING", "execution_id": "exec-local-1", "runbook_id": "restore-ecs-desired-count", "risk": "MEDIUM"}`
+> SNS notification: **Remediation Success: INC-20261120-d89515d5**
+> status: `{"action": "updated", "incident_id": "INC-20261120-d89515d5", "status": "RESOLVED"}`
 
 | Field | Value |
 |---|---|
-| Incident | `INC-20261120-fe595101` |
+| Incident | `INC-20261120-d89515d5` |
 | Severity | SEV1 |
 | Status | RESOLVED |
 | Engine | rules (confidence medium) |
@@ -24,24 +24,24 @@ recorded evidence, rules engine (Bedrock disabled). See docs/evidence/README.md 
 
 History:
 
-- `2026-11-20T15:59:26+00:00` **DETECTED** by `system` - cloudwatch-alarm: aiops-dev-no-healthy-targets
-- `2026-11-20T15:59:26+00:00` **ANALYSED** by `rules` - No Healthy Targets detected: aiops-dev-no-healthy-targets is ALARM.
-- `2026-11-20T15:59:26+00:00` **REMEDIATION_RECOMMENDED** by `rules` - restore-ecs-desired-count (risk MEDIUM) - awaiting human approval
-- `2026-11-20T15:59:26+00:00` **REMEDIATION_APPROVED** by `demo-operator` - restore-ecs-desired-count (risk MEDIUM): Service was scaled to 0 by mistake; restore baseline.
-- `2026-11-20T15:59:26+00:00` **REMEDIATION_STARTED** by `ssm` - aiops-dev-RestoreEcsDesiredCount execution exec-local-1
-- `2026-11-20T15:59:26+00:00` **REMEDIATION_SUCCEEDED** by `ssm` - execution exec-local-1 Success
+- `2026-11-20T22:20:47+00:00` **DETECTED** by `system` - cloudwatch-alarm: aiops-dev-no-healthy-targets
+- `2026-11-20T22:20:47+00:00` **ANALYSED** by `rules` - No Healthy Targets detected: aiops-dev-no-healthy-targets is ALARM.
+- `2026-11-20T22:20:47+00:00` **REMEDIATION_RECOMMENDED** by `rules` - restore-ecs-desired-count (risk MEDIUM) - awaiting human approval
+- `2026-11-20T22:20:47+00:00` **REMEDIATION_APPROVED** by `demo-operator` - restore-ecs-desired-count (risk MEDIUM): Service was scaled to 0 by mistake; restore baseline.
+- `2026-11-20T22:20:47+00:00` **REMEDIATION_STARTED** by `ssm` - aiops-dev-RestoreEcsDesiredCount execution exec-local-1
+- `2026-11-20T22:20:47+00:00` **REMEDIATION_SUCCEEDED** by `ssm` - execution exec-local-1 Success
 
 ## Scenario B - ECS task made unhealthy (/health -> 503)
 
 > SNS notification: **[SEV1] UNHEALTHY_TARGETS on aiops-dev-app**
-> analyzer: `{"action": "opened", "incident_id": "INC-20261120-bbd8c98c", "severity": "SEV1", "engine": "rules", "recommended_runbook": "restart-ecs-service"}`
-> analyzer (task stop): `{"action": "deduplicated", "incident_id": "INC-20261120-bbd8c98c"}`  <- correlated, not a new incident
+> analyzer: `{"action": "opened", "incident_id": "INC-20261120-7f41fbf7", "severity": "SEV1", "engine": "rules", "recommended_runbook": "restart-ecs-service"}`
+> analyzer (task stop): `{"action": "deduplicated", "incident_id": "INC-20261120-7f41fbf7"}`  <- correlated, not a new incident
 > SNS notification: **RESOLVED [SEV1] UNHEALTHY_TARGETS on aiops-dev-app**
-> analyzer (alarm OK): `{"action": "resolved", "incident_id": "INC-20261120-bbd8c98c", "mttr_seconds": 0}`
+> analyzer (alarm OK): `{"action": "resolved", "incident_id": "INC-20261120-7f41fbf7", "mttr_seconds": 0}`
 
 | Field | Value |
 |---|---|
-| Incident | `INC-20261120-bbd8c98c` |
+| Incident | `INC-20261120-7f41fbf7` |
 | Severity | SEV1 |
 | Status | RESOLVED |
 | Engine | rules (confidence medium) |
@@ -50,25 +50,25 @@ History:
 
 History:
 
-- `2026-11-20T15:59:26+00:00` **DETECTED** by `system` - cloudwatch-alarm: aiops-dev-unhealthy-targets
-- `2026-11-20T15:59:26+00:00` **ANALYSED** by `rules` - Unhealthy Targets detected: aiops-dev-unhealthy-targets is ALARM.
-- `2026-11-20T15:59:26+00:00` **REMEDIATION_RECOMMENDED** by `rules` - restart-ecs-service (risk MEDIUM) - awaiting human approval
-- `2026-11-20T15:59:26+00:00` **SIGNAL_REPEATED** by `system` - ecs-task arn:aws:ecs:us-east-1:123456789012:task/aiops-dev-cluster/abc123 STOPPED
-- `2026-11-20T15:59:26+00:00` **RECOVERED** by `system` - aiops-dev-unhealthy-targets returned to OK: Threshold Crossed: 1 out of the last 2 datapoints [1.0 (20/11/26 15:03:00)] was greater than the
+- `2026-11-20T22:20:47+00:00` **DETECTED** by `system` - cloudwatch-alarm: aiops-dev-unhealthy-targets
+- `2026-11-20T22:20:47+00:00` **ANALYSED** by `rules` - Unhealthy Targets detected: aiops-dev-unhealthy-targets is ALARM.
+- `2026-11-20T22:20:47+00:00` **REMEDIATION_RECOMMENDED** by `rules` - restart-ecs-service (risk MEDIUM) - awaiting human approval
+- `2026-11-20T22:20:47+00:00` **SIGNAL_REPEATED** by `system` - ecs-task arn:aws:ecs:us-east-1:123456789012:task/aiops-dev-cluster/abc123 STOPPED
+- `2026-11-20T22:20:47+00:00` **RECOVERED** by `system` - aiops-dev-unhealthy-targets returned to OK: Threshold Crossed: 1 out of the last 2 datapoints [1.0 (20/11/26 15:03:00)] was greater than the
 
 ## Scenario C - HTTP 5xx spike after a deployment (HIGH-risk recommendation)
 
 > SNS notification: **[SEV2] APPLICATION_ERRORS on aiops-dev-app**
-> analyzer: `{"action": "opened", "incident_id": "INC-20261120-fd2a3819", "severity": "SEV2", "engine": "rules", "recommended_runbook": "rollback-ecs-task-definition"}`
+> analyzer: `{"action": "opened", "incident_id": "INC-20261120-73ec6ab7", "severity": "SEV2", "engine": "rules", "recommended_runbook": "rollback-ecs-task-definition"}`
 > SSM StartAutomationExecution `aiops-dev-RollbackEcsTaskDefinition` params={"ClusterName": ["aiops-dev-cluster"], "ServiceName": ["aiops-dev-app"], "AutomationAssumeRole": ["arn:aws:iam::123456789012:role/aiops-dev-ssm-automation"], "Approvers": ["arn:aws:iam::123456789012:role/aiops-dev-senior-approver"]}
-> SNS notification: **Remediation started for INC-20261120-fd2a3819**
-> approval: `{"incident_id": "INC-20261120-fd2a3819", "status": "REMEDIATING", "execution_id": "exec-local-2", "runbook_id": "rollback-ecs-task-definition", "risk": "HIGH"}`
+> SNS notification: **Remediation started for INC-20261120-73ec6ab7**
+> approval: `{"incident_id": "INC-20261120-73ec6ab7", "status": "REMEDIATING", "execution_id": "exec-local-2", "runbook_id": "rollback-ecs-task-definition", "risk": "HIGH"}`
 > SSM execution now waits at the `aws:approve` step for the senior-approver role.
 
 
 | Field | Value |
 |---|---|
-| Incident | `INC-20261120-fd2a3819` |
+| Incident | `INC-20261120-73ec6ab7` |
 | Severity | SEV2 |
 | Status | REMEDIATING |
 | Engine | rules (confidence low) |
@@ -77,14 +77,14 @@ History:
 
 History:
 
-- `2026-11-20T15:59:26+00:00` **DETECTED** by `system` - cloudwatch-alarm: aiops-dev-alb-5xx
-- `2026-11-20T15:59:26+00:00` **ANALYSED** by `rules` - Application Errors detected: aiops-dev-alb-5xx is ALARM.
-- `2026-11-20T15:59:26+00:00` **REMEDIATION_RECOMMENDED** by `rules` - rollback-ecs-task-definition (risk HIGH) - awaiting human approval
-- `2026-11-20T15:59:26+00:00` **REMEDIATION_APPROVED** by `demo-operator` - rollback-ecs-task-definition (risk HIGH): Errors began with revision 8; roll back.
-- `2026-11-20T15:59:26+00:00` **REMEDIATION_STARTED** by `ssm` - aiops-dev-RollbackEcsTaskDefinition execution exec-local-2
+- `2026-11-20T22:20:47+00:00` **DETECTED** by `system` - cloudwatch-alarm: aiops-dev-alb-5xx
+- `2026-11-20T22:20:47+00:00` **ANALYSED** by `rules` - Application Errors detected: aiops-dev-alb-5xx is ALARM.
+- `2026-11-20T22:20:47+00:00` **REMEDIATION_RECOMMENDED** by `rules` - rollback-ecs-task-definition (risk HIGH) - awaiting human approval
+- `2026-11-20T22:20:47+00:00` **REMEDIATION_APPROVED** by `demo-operator` - rollback-ecs-task-definition (risk HIGH): Errors began with revision 8; roll back.
+- `2026-11-20T22:20:47+00:00` **REMEDIATION_STARTED** by `ssm` - aiops-dev-RollbackEcsTaskDefinition execution exec-local-2
 
 ## Dashboard widget output (HTML rendered by the custom widget Lambda)
 
 ```html
-<div style="font-family:Amazon Ember,Arial,sans-serif;font-size:13px"><p><b>Severity:</b> <span style="background:#d13212;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV1</span> 2 <span style="background:#ff9900;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV2</span> 1 <span style="background:#e6c200;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV3</span> 0 <span style="background:#879596;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV4</span> 0</p><p><b>Status:</b> REMEDIATING: 1 &middot; RESOLVED: 2</p><table class="cwdb-no-default-styles" style="width:100%;border-collapse:collapse"><tr style='text-align:left;border-bottom:1px solid #ccc'><th>Incident</th><th>Severity</th><th>Status</th><th>Created (UTC)</th><th>Probable cause</th><th>Recommendation</th><th>Last action</th></tr><tr style='border-bottom:1px solid #eee;vertical-align:top'><td><code>INC-20261120-bbd8c98c</code><br>UNHEALTHY_TARGETS</td><td><span style="background:#d13212;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV1</span></td><td>RESOLVED</td><td>2026-11-20T15:59:26+00:00</td><td>One or more targets are failing the ALB health check (/health). The application process is running but reporting unhealthy, or is not responding in time.<br><small>engine: rules / confidence: medium</small></td><td><code>restart-ecs-service</code></td><td>RECOVERED<br><small>system</small></td></tr><tr style='border-bottom:1px solid #eee ...
+<div style="font-family:Amazon Ember,Arial,sans-serif;font-size:13px"><p><b>Severity:</b> <span style="background:#d13212;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV1</span> 2 <span style="background:#ff9900;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV2</span> 1 <span style="background:#e6c200;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV3</span> 0 <span style="background:#879596;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV4</span> 0</p><p><b>Status:</b> REMEDIATING: 1 &middot; RESOLVED: 2</p><table class="cwdb-no-default-styles" style="width:100%;border-collapse:collapse"><tr style='text-align:left;border-bottom:1px solid #ccc'><th>Incident</th><th>Severity</th><th>Status</th><th>Created (UTC)</th><th>Probable cause</th><th>Recommendation</th><th>Last action</th></tr><tr style='border-bottom:1px solid #eee;vertical-align:top'><td><code>INC-20261120-73ec6ab7</code><br>APPLICATION_ERRORS</td><td><span style="background:#ff9900;color:#fff;padding:1px 6px;border-radius:3px;font-weight:bold">SEV2</span></td><td>REMEDIATING</td><td>2026-11-20T22:20:47+00:00</td><td>The application is returning elevated HTTP 5xx responses / logging errors.<br><small>engine: rules / confidence: low</small></td><td><code>rollback-ecs-task-definition</code></td><td>REMEDIATION_STARTED<br><small>ssm</small></td></tr><tr style='border-bottom:1px solid #eee;vertical-align:top'><td><code>INC-20261120-7f41fbf7</code><br ...
 ```

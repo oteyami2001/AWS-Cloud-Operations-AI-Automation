@@ -2,8 +2,13 @@ output "app_url" {
   value = "http://${module.workload.alb_dns_name}"
 }
 
-output "ecr_repository_url" {
-  value = module.workload.ecr_repository_url
+output "container_image" {
+  description = "Image deployed, pinned by digest."
+  value       = local.container_image
+}
+
+output "alb_allowed_ingress_cidrs" {
+  value = var.allowed_ingress_cidrs
 }
 
 output "cluster_name" {

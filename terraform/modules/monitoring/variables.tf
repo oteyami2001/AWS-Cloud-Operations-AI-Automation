@@ -39,25 +39,13 @@ variable "dlq_name" {
 }
 
 variable "alert_email" {
-  description = "Optional e-mail subscribed to the alerts topic (you must confirm the subscription)."
+  description = "E-mail subscribed to the alerts topic (AWS sends a confirmation mail that must be accepted)."
   type        = string
   default     = ""
-}
-
-variable "budget_email" {
-  description = "Optional e-mail for AWS Budgets alerts. Empty disables the budget."
-  type        = string
-  default     = ""
-}
-
-variable "monthly_budget_usd" {
-  type    = number
-  default = 50
-}
-
-variable "project_tag" {
-  description = "Value of the Project cost-allocation tag (activate it in the Billing console)."
-  type        = string
+  validation {
+    condition     = var.alert_email == "" || can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.alert_email))
+    error_message = "alert_email must be empty or a valid e-mail address."
+  }
 }
 
 variable "cpu_threshold" {

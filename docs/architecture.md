@@ -152,11 +152,11 @@ stateDiagram-v2
 │   │   └── handlers/           # analyzer · remediation · status · dashboard
 │   └── sample_app/             # monitored workload with fault injection + Dockerfile
 ├── terraform/
-│   ├── bootstrap/              # state bucket, lock table, GitHub OIDC roles
+│   ├── bootstrap/              # state bucket (S3 locking), OIDC roles, boundary, ECR, budget
 │   ├── envs/dev/               # composition root (+ offline terraform tests)
 │   └── modules/                # security · network · workload · monitoring · aiops · remediation · dashboard
 ├── tests/                      # pytest unit + integration (moto) tests, event fixtures
 ├── scripts/                    # build, approve, simulate, load test, offline demo
 ├── docs/                       # ADR, architecture, cost, security, runbooks, evidence
-└── .github/workflows/          # ci.yml (no AWS), deploy.yml (manual, approval-gated)
+└── .github/workflows/          # ci.yml (no AWS), image.yml (scan + push), deploy.yml (approval-gated)
 ```

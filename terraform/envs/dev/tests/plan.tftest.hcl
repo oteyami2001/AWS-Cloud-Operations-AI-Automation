@@ -51,11 +51,17 @@ mock_provider "aws" {
   mock_resource "aws_sns_topic" {
     defaults = { arn = "arn:aws:sns:us-east-1:123456789012:mock" }
   }
-  mock_resource "aws_ecr_repository" {
+  mock_data "aws_iam_policy" {
+    defaults = { arn = "arn:aws:iam::123456789012:policy/aiops-dev-workload-boundary" }
+  }
+  mock_data "aws_ecr_repository" {
     defaults = {
-      arn            = "arn:aws:ecr:us-east-1:123456789012:repository/mock"
-      repository_url = "123456789012.dkr.ecr.us-east-1.amazonaws.com/mock"
+      arn            = "arn:aws:ecr:us-east-1:123456789012:repository/aiops-sample-app"
+      repository_url = "123456789012.dkr.ecr.us-east-1.amazonaws.com/aiops-sample-app"
     }
+  }
+  mock_data "aws_ecr_image" {
+    defaults = { image_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000" }
   }
   mock_resource "aws_secretsmanager_secret" {
     defaults = { arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:mock" }
@@ -80,7 +86,6 @@ mock_provider "aws" {
   }
 }
 
-mock_provider "random" {}
 
 variables {
   allowed_ingress_cidrs = ["203.0.113.10/32"]
@@ -120,10 +125,42 @@ run "bedrock_off_by_default" {
   }
 }
 
+run "image_is_pinned_by_digest" {
+  command = plan
+  assert {
+    condition     = output.container_image == "123456789012.dkr.ecr.us-east-1.amazonaws.com/aiops-sample-app@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    error_message = "task definition must reference the ECR image by immutable digest"
+  }
+}
+
 run "ingress_must_be_explicit" {
   command = plan
   variables {
     allowed_ingress_cidrs = []
+  }
+  expect_failures = [var.allowed_ingress_cidrs]
+}
+
+run "ingress_rejects_open_internet" {
+  command = plan
+  variables {
+    allowed_ingress_cidrs = ["0.0.0.0/0"]
+  }
+  expect_failures = [var.allowed_ingress_cidrs]
+}
+
+run "ingress_rejects_ranges_wider_than_32" {
+  command = plan
+  variables {
+    allowed_ingress_cidrs = ["203.0.113.0/24"]
+  }
+  expect_failures = [var.allowed_ingress_cidrs]
+}
+
+run "ingress_rejects_malformed_address" {
+  command = plan
+  variables {
+    allowed_ingress_cidrs = ["not-an-ip/32"]
   }
   expect_failures = [var.allowed_ingress_cidrs]
 }

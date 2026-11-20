@@ -45,6 +45,7 @@ data "aws_iam_policy_document" "automation_assume" {
 }
 
 resource "aws_iam_role" "automation" {
+  permissions_boundary = var.permissions_boundary_arn
   name                 = "${var.name_prefix}-ssm-automation"
   assume_role_policy   = data.aws_iam_policy_document.automation_assume.json
   max_session_duration = 3600

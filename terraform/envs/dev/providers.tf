@@ -1,11 +1,9 @@
 terraform {
-  required_version = ">= 1.7.0"
+  required_version = ">= 1.11.0"
   required_providers {
-    aws    = { source = "hashicorp/aws", version = "~> 5.80" }
-    random = { source = "hashicorp/random", version = "~> 3.6" }
+    aws = { source = "hashicorp/aws", version = "~> 5.100" }
   }
-  # Local state by default. For team use copy backend.tf.example -> backend.tf after
-  # applying terraform/bootstrap.
+  # Remote state: copy backend.tf.example -> backend.tf (S3, encrypted, versioned, S3-native locking).
 }
 
 provider "aws" {

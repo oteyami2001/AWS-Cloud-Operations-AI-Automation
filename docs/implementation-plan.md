@@ -14,13 +14,19 @@ Nothing has been deployed to AWS. Each ⏸️ phase starts only after you confir
 | 4 | Bedrock-assisted root cause summaries (opt-in) | ✅ tested with a fake client | ⏸️ needs Bedrock model access | Incident `engine = bedrock:…`; fallback proven by disabling access |
 | 5 | Human-approved remediation (4 SSM runbooks, approval Function URL, 2-person rule) | ✅ | ⏸️ | Scenario A restored via approved runbook; Scenario C waits at `aws:approve` |
 | 6 | Operations dashboard (custom widget + metrics) | ✅ render tested | ⏸️ | Dashboard screenshot shows incident table |
-| 7 | Automated testing + CI/CD (GitHub Actions, OIDC, plan/apply split) | ✅ workflows written; runs on push | ⏸️ OIDC bootstrap | Green `ci` run; `deploy` plan run |
+| 7 | Automated testing + CI/CD (GitHub Actions, OIDC, plan/apply split, image pipeline) | ✅ CI fixed + hardened (SHA-pinned actions); 25 offline Terraform tests | ⏸️ bootstrap (OIDC roles, state, ECR, budget) | Green `ci` on the PR; `deploy` plan run from `main` |
 | 8 | Observability of the platform itself (EMF metrics, MTTR, analyzer/DLQ alarms, X-Ray) | ✅ | ⏸️ | Metrics visible on dashboard |
 | 9 | Evidence capture, load test, demo video, cleanup | ✅ local evidence | ⏸️ | `docs/evidence/` checklist complete; `terraform destroy` clean |
 
+## Next approved step
+
+The first deployment (bootstrap + Phases 1–2) is fully specified in
+[`deployment-plan.md`](deployment-plan.md), with its resource list, cost, commands and validation.
+It waits for the owner's explicit approval.
+
 ## Phase-by-phase deployment (when you approve)
 
-1. **Phase 1-2 (≈ $1.45/day):** bootstrap (optional) → build package → `terraform apply` → push image.
+1. **Phase 1-2 (≈ $1.35/day):** bootstrap (required) → publish image → plan → approval-gated apply (see `deployment-plan.md`).
 2. **Phase 3:** run Scenario B, check the incident record and SNS mail.
 3. **Phase 4:** enable model access for the chosen Claude model in the Bedrock console, then set
    `bedrock_enabled = true`. **Verify** the IAM actions the Bedrock endpoint used by

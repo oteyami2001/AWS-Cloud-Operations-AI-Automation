@@ -23,9 +23,13 @@ variable "fault_token_secret_arn" {
 }
 
 variable "container_image" {
-  description = "Full image URI override. Empty = use this module's ECR repo with var.image_tag."
+  description = "Full image URI, preferably pinned by digest (repo@sha256:...)."
   type        = string
-  default     = ""
+}
+
+variable "ecr_repository_arn" {
+  description = "ECR repository the execution role may pull from."
+  type        = string
 }
 
 variable "image_tag" {
@@ -54,8 +58,12 @@ variable "desired_count" {
 }
 
 variable "allowed_ingress_cidrs" {
-  description = "CIDRs allowed to reach the demo ALB. Restrict to your own IP."
+  description = "Single-host IPv4 CIDRs (/32) allowed to reach the demo ALB on port 80."
   type        = list(string)
+  validation {
+    condition     = length(var.allowed_ingress_cidrs) > 0 && alltrue([for c in var.allowed_ingress_cidrs : can(cidrhost(c, 0)) && endswith(c, "/32")])
+    error_message = "allowed_ingress_cidrs must be one or more IPv4 /32 addresses (no wider ranges, no 0.0.0.0/0)."
+  }
 }
 
 variable "enable_container_insights" {
@@ -66,4 +74,10 @@ variable "enable_container_insights" {
 variable "log_retention_days" {
   type    = number
   default = 14
+}
+
+variable "permissions_boundary_arn" {
+  description = "Permissions boundary attached to every IAM role in this module (from terraform/bootstrap)."
+  type        = string
+  default     = null
 }

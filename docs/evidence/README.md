@@ -6,9 +6,11 @@ Evidence is separated by where it was produced. **Do not mix them up in intervie
 
 | Artifact | File | How to regenerate |
 |---|---|---|
+| **All local gates in one run** (lint, SAST, 60 tests, fmt, validate, 25 Terraform tests, tflint, Checkov, Trivy, simulation) | `local/validation-run.txt` | see the commands in that file |
 | Unit/integration test report (60 tests) + coverage (≈93%) | `local/pytest-report.txt`, `local/pytest-junit.xml`, `local/coverage.xml` | `make test` |
-| Terraform fmt / validate / offline tests (3 stack + 7 guardrail tests) | `local/terraform-validation.md` | `make tf-validate tf-test` |
-| Checkov IaC scan (0 failed) | `local/checkov.md` | `make checkov` |
+| Terraform fmt / validate / offline tests (25: bootstrap 6, envs/dev 7, aiops 7, workload 5) | `local/terraform-validation.md` | `make tf-validate tf-test` |
+| Checkov IaC scan (406 passed, 0 failed, 38 justified skips) | `local/checkov.md` | `make checkov` |
+| Pre-deployment security review (Checkov skip review, ingress, IAM/OIDC, state, budget) | `../security-review.md` | — |
 | Offline end-to-end incident simulation (scenarios A, B, C) | `local/incident-simulation.md` | `make demo-local` |
 | Load test of the sample app (single local process) | `local/load-tests/*.md` | `make load-test-local` |
 
@@ -19,7 +21,8 @@ a baseline, not a capacity claim.
 
 ## B. GitHub Actions evidence (⏳ after you push / run workflows)
 
-- [ ] Screenshot of a green `ci` run (all 4 jobs) → `github/ci-run.png`
+- [ ] Screenshot of a green `ci` run (all 4 jobs) on the PR → `github/ci-run.png`
+- [ ] `image` workflow run (Trivy gate + pushed digest) → `github/image-run.png`
 - [ ] Downloaded `python-test-reports` artifact → `github/`
 - [ ] Checkov SARIF visible in the Security tab → `github/code-scanning.png`
 - [ ] `deploy` workflow **plan** run summary → `github/deploy-plan.png`

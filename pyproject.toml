@@ -6,6 +6,8 @@ requires-python = ">=3.12"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+# botocore (third-party) still calls datetime.utcnow(); our own code must stay warning-free.
+filterwarnings = ["ignore:datetime.datetime.utcnow:DeprecationWarning:botocore"]
 
 [tool.coverage.run]
 source = ["src/aiops"]

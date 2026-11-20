@@ -26,6 +26,7 @@ resource "aws_internet_gateway" "this" {
   tags   = { Name = "${var.name_prefix}-igw" }
 }
 
+#trivy:ignore:AWS-0164 Public subnets by design (no NAT for cost); task SG admits only the ALB SG.
 resource "aws_subnet" "public" {
   # checkov:skip=CKV_AWS_130:Public subnets by design (no NAT for cost); SGs restrict ingress to the ALB.
   count                   = length(local.azs)
@@ -70,9 +71,10 @@ data "aws_iam_policy_document" "flow_assume" {
 }
 
 resource "aws_iam_role" "flow" {
-  count              = var.enable_flow_logs ? 1 : 0
-  name               = "${var.name_prefix}-vpc-flow-logs"
-  assume_role_policy = data.aws_iam_policy_document.flow_assume.json
+  permissions_boundary = var.permissions_boundary_arn
+  count                = var.enable_flow_logs ? 1 : 0
+  name                 = "${var.name_prefix}-vpc-flow-logs"
+  assume_role_policy   = data.aws_iam_policy_document.flow_assume.json
 }
 
 resource "aws_iam_role_policy" "flow" {

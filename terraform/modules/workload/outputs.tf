@@ -42,6 +42,6 @@ output "app_log_group_arn" {
   value = aws_cloudwatch_log_group.app.arn
 }
 
-output "ecr_repository_url" {
-  value = aws_ecr_repository.app.repository_url
+output "alb_security_group_id" {
+  value = aws_security_group.alb.id
 }

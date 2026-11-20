@@ -122,3 +122,9 @@ variable "log_retention_days" {
   type    = number
   default = 14
 }
+
+variable "permissions_boundary_arn" {
+  description = "Permissions boundary attached to every IAM role in this module (from terraform/bootstrap)."
+  type        = string
+  default     = null
+}

@@ -1,11 +1,4 @@
 ............................................................             [100%]
-=============================== warnings summary ===============================
-tests/unit/test_analyzer_handler.py: 44 warnings
-tests/unit/test_remediation.py: 82 warnings
-  /usr/local/lib/python3.13/site-packages/botocore/auth.py:424: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
-    datetime_now = datetime.datetime.utcnow()
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ================================ tests coverage ================================
 _______________ coverage: platform linux, python 3.13.18-final-0 _______________
 

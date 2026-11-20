@@ -1,17 +1,13 @@
 # Copy to terraform.tfvars (git-ignored) and edit.
 region                = "us-east-1"
-allowed_ingress_cidrs = ["203.0.113.10/32"] # your public IP: curl -s https://checkip.amazonaws.com
-image_tag             = "v1"
+allowed_ingress_cidrs = ["203.0.113.10/32"] # YOUR public IP /32 (curl -s https://checkip.amazonaws.com)
+image_tag             = "v1"                # must already be pushed to ECR (plan fails otherwise)
 
-# Notifications / cost guardrail (optional, recommended)
-alert_email  = ""
-budget_email = ""
+alert_email = "you@example.com" # SNS incident alerts; confirm the subscription e-mail
 
-# Phase 4: turn on Amazon Bedrock analysis only after model access is enabled in the console.
-bedrock_enabled          = false
-bedrock_model_id         = "anthropic.claude-opus-5-5"
-bedrock_daily_call_limit = 20
+# Bedrock stays OFF for the first deployment.
+bedrock_enabled = false
 
-# Human roles. Leave empty to trust this account (IAM policies decide who may assume them).
+# Human roles: principals allowed to assume operator / senior-approver (MFA required).
 trusted_principal_arns = []
 require_mfa            = true

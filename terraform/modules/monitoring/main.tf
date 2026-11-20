@@ -175,34 +175,5 @@ resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
-
-# --- Cost guardrail -----------------------------------------------------------
-resource "aws_budgets_budget" "monthly" {
-  count        = var.budget_email == "" ? 0 : 1
-  name         = "${local.p}-monthly"
-  budget_type  = "COST"
-  limit_amount = tostring(var.monthly_budget_usd)
-  limit_unit   = "USD"
-  time_unit    = "MONTHLY"
-
-  cost_filter {
-    name   = "TagKeyValue"
-    values = [format("user:Project$%s", var.project_tag)]
-  }
-
-  notification {
-    comparison_operator        = "GREATER_THAN"
-    threshold                  = 50
-    threshold_type             = "PERCENTAGE"
-    notification_type          = "FORECASTED"
-    subscriber_email_addresses = [var.budget_email]
-  }
-
-  notification {
-    comparison_operator        = "GREATER_THAN"
-    threshold                  = 100
-    threshold_type             = "PERCENTAGE"
-    notification_type          = "ACTUAL"
-    subscriber_email_addresses = [var.budget_email]
-  }
-}
+# Cost guardrail: the account-level AWS Budget lives in terraform/bootstrap so it exists before
+# any deployment and survives `terraform destroy` of this environment.

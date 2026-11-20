@@ -41,8 +41,8 @@ Full log: [`evidence/local/validation-run.txt`](evidence/local/validation-run.tx
 | IaC security | Checkov 3.4.6 | ✅ 406 passed, **0 failed**, 38 skipped (all justified inline, reviewed below) |
 | IaC + Dockerfile misconfig | Trivy 0.76.2 `config` | ✅ 0 HIGH/CRITICAL (5 justified inline ignores) |
 | Dependencies + secrets | Trivy `fs` | ✅ 0 HIGH/CRITICAL |
-| Docker build, read-only/non-root smoke test, image CVE scan | Docker + Trivy | ⏳ **CI only.** This sandbox has no Docker daemon. Runs in the `container` job |
-| tflint/Trivy actions, Checkov SARIF upload | GitHub Actions | ⏳ verified by the CI run on this PR |
+| Docker build, read-only/non-root smoke test, image CVE scan | Docker + Trivy (CI) | ✅ passed in CI after the image hardening. The first gated run correctly **blocked** base-image CVEs: `zlib1g` CVE-2026-85091 and HIGH findings in pip-vendored `msgpack`/`urllib3`/`setuptools`, fixed by OS patching and removing pip |
+| Full CI on GitHub (4 jobs: Python, Terraform + tflint, Checkov + SARIF, Container + Trivy) | GitHub Actions | ✅ [run 44829246081](https://github.com/oteyami2001/AWS-Cloud-Operations-AI-Automation/actions/runs/44829246081) (`pull_request`) and [run 44829201157](https://github.com/oteyami2001/AWS-Cloud-Operations-AI-Automation/actions/runs/44829201157) (`push`), both green |
 
 ## 3. Network exposure verification
 

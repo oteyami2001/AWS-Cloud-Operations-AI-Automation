@@ -49,6 +49,9 @@ jobs:
       - name: Job summary
         if: always()
         run: |
+          if [ ! -f reports/junit.xml ]; then
+            echo "## Unit tests did not run (an earlier step failed)" >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
           {
             echo "## Unit tests"
             python - <<'PY'

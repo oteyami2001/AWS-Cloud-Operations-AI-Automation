@@ -106,6 +106,20 @@ run "state_bucket_is_private_versioned_encrypted" {
     condition     = length([for s in data.aws_iam_policy_document.state_bucket.statement : s if s.sid == "DenyInsecureTransport"]) == 1
     error_message = "state bucket must deny non-TLS access"
   }
+  # Regression guard: an unconditional Deny in the bucket policy would lock Terraform out of its
+  # own state (e.g. a Deny s3:PutObject without its encryption condition).
+  assert {
+    condition = alltrue([for s in data.aws_iam_policy_document.state_bucket.statement :
+    length(coalesce(s.condition, [])) > 0 if s.effect == "Deny"])
+    error_message = "every Deny statement in the state bucket policy must have a condition (an unconditional Deny blocks Terraform state writes)"
+  }
+  assert {
+    condition = anytrue([for s in data.aws_iam_policy_document.state_bucket.statement :
+      s.sid == "DenyNonAES256ObjectUploads" && anytrue([for c in coalesce(s.condition, []) :
+        c.test == "StringNotEqualsIfExists" && c.variable == "s3:x-amz-server-side-encryption" && toset(c.values) == toset(["AES256"])
+    ])])
+    error_message = "PutObject deny must apply only when a non-AES256 encryption header is sent (IfExists), so default-encrypted uploads still work"
+  }
 }
 
 run "budget_alerts_configured" {

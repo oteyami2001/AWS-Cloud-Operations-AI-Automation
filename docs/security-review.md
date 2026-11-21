@@ -72,7 +72,7 @@ unless it is SigV4-signed by the operator role.
 | Plan role permissions | Describe/List/Get metadata for the services in use. **No** S3 object reads outside state, DynamoDB items, log events, SQS messages, SSM parameters, image layers, or KMS decrypt. One exception: `GetSecretValue` on the demo fault token, needed to refresh the secret version | ✅ (tested) |
 | Apply role permissions | Listed services only, limited to `us-east-1` (`aws:RequestedRegion`); EC2 limited to VPC/SG/route APIs (it **cannot** launch instances). IAM writes only on `aiops-dev-*` roles **and only when the workload permissions boundary is attached**. Explicit denies: removing boundaries, IAM users/access keys, Organizations/account, CloudTrail stop/delete, state-bucket policy/versioning changes, any change to the CI roles or the boundary | ✅ blocks the classic "create an admin role" escalation (tested) |
 | Workload permissions boundary | All 9 workload roles carry it (10 with VPC flow logs on). It is a ceiling: only the actions those roles use, IAM writes denied, PassRole only for `aiops-dev-*` | ✅ |
-| State storage | S3, SSE-S3 (AES-256), versioning, 90-day non-current expiry (keeps ≥20 versions), TLS-only, Block Public Access, ACLs disabled, denies unencrypted puts | ✅ |
+| State storage | S3, SSE-S3 (AES-256), versioning, 90-day non-current expiry (keeps ≥20 versions), TLS-only, Block Public Access, ACLs disabled, denies uploads that request a non-AES256 encryption (`DenyNonAES256ObjectUploads`, condition `StringNotEqualsIfExists`) | ✅. A test fails if any Deny in the bucket policy loses its condition (see section 6) |
 | State locking | S3-native lock file (`use_lockfile = true`, `-lock-timeout=5m` in CI, one deploy at a time via workflow concurrency) | ✅ |
 | Secrets in state | None. The fault token is ephemeral/write-only | ✅ |
 | Budget | Account-wide, $30/month (variable), e-mail at 50 % / 80 % / 100 % actual and 100 % forecast; lives in bootstrap so it exists **before** deployment and survives `destroy` | ✅ (needs your e-mail). AWS Budgets refreshes a few times a day, so alerts lag spend by hours. It is a guardrail, not a hard stop |
@@ -120,3 +120,32 @@ Risk = residual risk **for this demo deployment** (one account, ALB limited to y
 
 **Material items:** only **checks 1–2, the plaintext HTTP listener**. It is accepted for this demo with the
 mitigations listed. Checks 6, 11, 17 and 29–31 are low-medium and are listed as production follow-ups.
+
+## 6. Addendum 2026-11-21: bootstrap state-bucket policy regression
+
+**What happened:** during a manual edit in a local checkout (never committed), the condition was
+removed from the bucket-policy statement that rejects non-AES256 uploads. An unconditional
+`Deny s3:PutObject` for `Principal "*"` blocks **every** principal, including the admin and both
+CI roles, because an explicit Deny overrides any Allow. Terraform could then never write
+`envs/dev/terraform.tfstate`, its `.tflock` lock file, or the migrated bootstrap state. Since the
+bucket policy is applied in the same run that creates the bucket, the very first state write
+(`terraform init -migrate-state`) would have failed. Recovering would have required the account
+root user or a policy fix applied with local state.
+
+**Fix (repository):**
+
+- The statement is renamed `DenyNonAES256ObjectUploads`, and its `StringNotEqualsIfExists`
+  `s3:x-amz-server-side-encryption = AES256` condition is kept. It rejects only uploads that
+  *request* a different encryption. Uploads without the header are still encrypted with AES-256 by
+  default bucket encryption, and the S3 backend (`encrypt = true`) sends `AES256` explicitly.
+- New assertions in `terraform/bootstrap/tests/bootstrap.tftest.hcl`:
+  1. every `Deny` in the state-bucket policy has at least one condition;
+  2. the PutObject deny uses exactly the IfExists/AES256 condition.
+
+  Both were verified to **fail** on a copy with the condition removed, and to pass on the fix.
+- Unchanged and re-verified: AES-256 default encryption, versioning, the TLS-only deny,
+  Block Public Access ×4, and ACLs disabled.
+
+**Action for the owner:** discard the local edit and use the repository version (see the readiness
+report), then **re-run the bootstrap plan**. The plan you generated before the edit is stale.
+

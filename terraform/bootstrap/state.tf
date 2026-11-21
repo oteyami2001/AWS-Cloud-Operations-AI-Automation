@@ -73,8 +73,13 @@ data "aws_iam_policy_document" "state_bucket" {
     }
   }
 
+  # Blocks uploads that REQUEST a different server-side encryption (e.g. SSE-KMS with an arbitrary
+  # key). Uploads without the header are allowed and still encrypted with AES-256 by the bucket's
+  # default encryption; the Terraform S3 backend (`encrypt = true`) sends "AES256" explicitly.
+  # !! The condition is load-bearing: without it this statement denies EVERY PutObject, so
+  # Terraform could never write state or its lock file. Guarded by tests/bootstrap.tftest.hcl.
   statement {
-    sid       = "DenyUnencryptedObjectUploads"
+    sid       = "DenyNonAES256ObjectUploads"
     effect    = "Deny"
     actions   = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.state.arn}/*"]

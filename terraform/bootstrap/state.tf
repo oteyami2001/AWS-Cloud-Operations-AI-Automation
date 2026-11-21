@@ -56,42 +56,19 @@ resource "aws_s3_bucket_lifecycle_configuration" "state" {
   }
 }
 
-data "aws_iam_policy_document" "state_bucket" {
-  statement {
-    sid       = "DenyInsecureTransport"
-    effect    = "Deny"
-    actions   = ["s3:*"]
-    resources = [aws_s3_bucket.state.arn, "${aws_s3_bucket.state.arn}/*"]
-    principals {
-      type        = "*"
-      identifiers = ["*"]
-    }
-    condition {
-      test     = "Bool"
-      variable = "aws:SecureTransport"
-      values   = ["false"]
-    }
-  }
-
-  statement {
-    sid       = "DenyUnencryptedObjectUploads"
-    effect    = "Deny"
-    actions   = ["s3:PutObject"]
-    resources = ["${aws_s3_bucket.state.arn}/*"]
-    principals {
-      type        = "*"
-      identifiers = ["*"]
-    }
-    condition {
-      test     = "StringNotEqualsIfExists"
-      variable = "s3:x-amz-server-side-encryption"
-      values   = ["AES256"]
-    }
-  }
-}
+# State-bucket policy. Single source of truth in policies/state_bucket_policy.json.tftpl, also read
+# by tests/unit/test_state_bucket_policy.py, which evaluates it with AWS IAM condition semantics
+# against the exact requests the Terraform S3 backend makes.
+#
+# IAM semantics that matter here (AWS IAM User Guide, "...IfExists condition operators"):
+#   StringNotEqualsIfExists evaluates to TRUE when the key is ABSENT, so a Deny using it rejects every
+#   upload WITHOUT an encryption header: default-encrypted uploads, multipart UploadPart requests,
+#   and backend writes with `encrypt` unset. The policy therefore denies only when the header IS
+#   present (Null = "false") AND is not AES256. Header-less uploads are still encrypted with AES-256
+#   by the bucket default encryption (aws_s3_bucket_server_side_encryption_configuration.state).
 
 resource "aws_s3_bucket_policy" "state" {
   bucket     = aws_s3_bucket.state.id
-  policy     = data.aws_iam_policy_document.state_bucket.json
+  policy     = templatefile("${path.module}/policies/state_bucket_policy.json.tftpl", { bucket_arn = aws_s3_bucket.state.arn })
   depends_on = [aws_s3_bucket_public_access_block.state]
 }

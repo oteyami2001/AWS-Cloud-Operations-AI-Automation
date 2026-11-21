@@ -87,7 +87,9 @@ tf plan -input=false -no-color -out=bootstrap.tfplan > bootstrap-plan.log 2>&1 |
 summary="$(grep -E '^Plan:|No changes' bootstrap-plan.log || true)"
 grep -E '# .* will be created' bootstrap-plan.log | sed 's/^ *# /   + /'
 echo "   $summary"
-if grep -qE '# .* (will be updated|will be destroyed|must be replaced|will be read during apply)' bootstrap-plan.log \
+# Data sources that depend on not-yet-created resources print "will be read during apply"; those
+# are read-only lookups, not infrastructure changes, so they are deliberately NOT matched here.
+if grep -qE '# .* (will be updated in-place|will be destroyed|must be replaced|will be replaced)' bootstrap-plan.log \
    || ! grep -qE 'Plan: [0-9]+ to add, 0 to change, 0 to destroy|No changes' bootstrap-plan.log; then
   fail "plan contains changes other than additions - not applying. Send bootstrap-plan.log for review."
 fi

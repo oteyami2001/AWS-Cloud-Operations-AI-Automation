@@ -72,7 +72,7 @@ unless it is SigV4-signed by the operator role.
 | Plan role permissions | Describe/List/Get metadata for the services in use. **No** S3 object reads outside state, DynamoDB items, log events, SQS messages, SSM parameters, image layers, or KMS decrypt. One exception: `GetSecretValue` on the demo fault token, needed to refresh the secret version | ✅ (tested) |
 | Apply role permissions | Listed services only, limited to `us-east-1` (`aws:RequestedRegion`); EC2 limited to VPC/SG/route APIs (it **cannot** launch instances). IAM writes only on `aiops-dev-*` roles **and only when the workload permissions boundary is attached**. Explicit denies: removing boundaries, IAM users/access keys, Organizations/account, CloudTrail stop/delete, state-bucket policy/versioning changes, any change to the CI roles or the boundary | ✅ blocks the classic "create an admin role" escalation (tested) |
 | Workload permissions boundary | All 9 workload roles carry it (10 with VPC flow logs on). It is a ceiling: only the actions those roles use, IAM writes denied, PassRole only for `aiops-dev-*` | ✅ |
-| State storage | S3, SSE-S3 (AES-256), versioning, 90-day non-current expiry (keeps ≥20 versions), TLS-only, Block Public Access, ACLs disabled, denies uploads that request a non-AES256 encryption (`DenyNonAES256ObjectUploads`, condition `StringNotEqualsIfExists`) | ✅. A test fails if any Deny in the bucket policy loses its condition (see section 6) |
+| State storage | S3, SSE-S3 (AES-256) default encryption, versioning, 90-day non-current expiry (keeps ≥20 versions), TLS-only, Block Public Access, ACLs disabled. The bucket policy denies uploads that *explicitly request* a non-AES256 encryption (`Null`=false AND `StringNotEquals`) and SSE-C uploads | ✅ Request-level IAM evaluation is tested in `tests/unit/test_state_bucket_policy.py` (section 7) |
 | State locking | S3-native lock file (`use_lockfile = true`, `-lock-timeout=5m` in CI, one deploy at a time via workflow concurrency) | ✅ |
 | Secrets in state | None. The fault token is ephemeral/write-only | ✅ |
 | Budget | Account-wide, $30/month (variable), e-mail at 50 % / 80 % / 100 % actual and 100 % forecast; lives in bootstrap so it exists **before** deployment and survives `destroy` | ✅ (needs your e-mail). AWS Budgets refreshes a few times a day, so alerts lag spend by hours. It is a guardrail, not a hard stop |
@@ -132,20 +132,76 @@ bucket policy is applied in the same run that creates the bucket, the very first
 (`terraform init -migrate-state`) would have failed. Recovering would have required the account
 root user or a policy fix applied with local state.
 
-**Fix (repository):**
-
-- The statement is renamed `DenyNonAES256ObjectUploads`, and its `StringNotEqualsIfExists`
-  `s3:x-amz-server-side-encryption = AES256` condition is kept. It rejects only uploads that
-  *request* a different encryption. Uploads without the header are still encrypted with AES-256 by
-  default bucket encryption, and the S3 backend (`encrypt = true`) sends `AES256` explicitly.
-- New assertions in `terraform/bootstrap/tests/bootstrap.tftest.hcl`:
-  1. every `Deny` in the state-bucket policy has at least one condition;
-  2. the PutObject deny uses exactly the IfExists/AES256 condition.
-
-  Both were verified to **fail** on a copy with the condition removed, and to pass on the fix.
-- Unchanged and re-verified: AES-256 default encryption, versioning, the TLS-only deny,
-  Block Public Access ×4, and ACLs disabled.
+**Fix (repository), commit `b194ab0`:** superseded by section 7. That commit kept a
+`StringNotEqualsIfExists` condition and claimed it allowed uploads without an encryption header.
+**That claim was wrong** (see section 7).
 
 **Action for the owner:** discard the local edit and use the repository version (see the readiness
 report), then **re-run the bootstrap plan**. The plan you generated before the edit is stale.
+
+## 7. Addendum 2026-11-21: `StringNotEqualsIfExists` in a Deny (verified, corrected)
+
+**The question:** does `Deny s3:PutObject` with `StringNotEqualsIfExists s3:x-amz-server-side-encryption = AES256`
+block requests that carry no encryption header?
+
+**AWS-documented semantics** (IAM User Guide, *"...IfExists condition operators"*; source verified from
+the archived `awsdocs/iam-user-guide` repository, revision of 2023-06-15, because docs.aws.amazon.com is
+not reachable from this sandbox):
+
+> "If the key is not present, evaluate the condition element as true." … "If you are using an
+> `"Effect": "Deny"` element with a negated condition operator like `StringNotEqualsIfExists`, the
+> request is still denied even if the tag is missing."
+
+The same page notes that a plain negated operator (`StringNotEquals`) is also **true** for a missing key.
+**Result: the `b194ab0` policy denied every `PutObject` without the header.**
+
+**What Terraform actually sends** (verified in `hashicorp/terraform` v1.17.2,
+`internal/backend/remote-state/s3/client.go`):
+
+| Backend operation | API call | SSE header with `encrypt = true` |
+|---|---|---|
+| Write state (`put`) | `PutObject` via `manager.Uploader` (multipart for bodies over the part size) | `AES256` on the request / `CreateMultipartUpload`; **absent on `UploadPart`** |
+| Acquire lock (`lockWithFile`) | `PutObject` with `If-None-Match: *` | `AES256` |
+| Release lock (`Unlock`) | `DeleteObject` | n/a |
+| Read state / lock | `GetObject` / `HeadObject` | n/a |
+
+**Impact of the `b194ab0` policy:** normal small-state writes with `encrypt = true` would have succeeded.
+These would have been **denied**, locking Terraform out:
+
+- any state write with `encrypt` unset or false;
+- multipart uploads once state grows past the multipart threshold (`UploadPart` has no SSE header);
+- console or CLI uploads that rely on default encryption.
+
+**Corrected policy:** `terraform/bootstrap/policies/state_bucket_policy.json.tftpl`, the single source
+of truth for both Terraform and the test.
+
+| Sid | Effect | Condition | Purpose |
+|---|---|---|---|
+| `DenyInsecureTransport` | Deny `s3:*` on bucket + objects | `Bool aws:SecureTransport = false` | HTTPS only |
+| `DenyExplicitNonAES256Encryption` | Deny `s3:PutObject` | `Null s3:x-amz-server-side-encryption = false` **AND** `StringNotEquals … = AES256` | Reject uploads that *request* SSE-KMS / DSSE-KMS. Header-less uploads are allowed and encrypted with AES-256 by default bucket encryption |
+| `DenySSECustomerKeys` | Deny `s3:PutObject` | `Null s3:x-amz-server-side-encryption-customer-algorithm = false` | Reject SSE-C objects, which would be unreadable without the uploader's key |
+
+**Regression tests:**
+
+- `tests/unit/test_state_bucket_policy.py` evaluates the rendered template with the documented IAM
+  semantics against 12 request scenarios:
+  - 7 must be allowed: state put, lock put, `encrypt` unset, `UploadPart`, `GetObject`, `DeleteObject` (unlock), `ListBucket`;
+  - 5 must be denied: SSE-KMS, DSSE-KMS, SSE-C, and plain HTTP (×2).
+- It also pins the evaluator to the documented `IfExists`/`Null` behaviour, and proves that three
+  known-bad variants (unconditional, `StringNotEqualsIfExists`, `StringNotEquals` without `Null`)
+  would deny header-less uploads.
+- Verified: run against the `b194ab0` policy, the suite **fails** on *encrypt unset* and *UploadPart*.
+- `terraform/bootstrap/tests/bootstrap.tftest.hcl` asserts on the rendered policy that:
+  - every Deny is conditional;
+  - no Deny uses `...IfExists`;
+  - every negated operator has a `Null = "false"` guard;
+  - the TLS and non-AES256 denies exist.
+
+  These assertions also fail on the `b194ab0` policy.
+
+**Caveat:** the evaluator implements only the operators this policy uses, following AWS's published
+rules. It is not the AWS policy engine. Before relying on it in production, confirm with the IAM
+Policy Simulator or IAM Access Analyzer `check-access-not-granted` after bootstrap. With the
+`templatefile` policy, Checkov's generic IAM checks no longer apply to this document (406 → 395
+passed checks); the semantic test replaces them.
 

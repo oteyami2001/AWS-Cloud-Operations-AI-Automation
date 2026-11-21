@@ -129,7 +129,7 @@ terraform -chdir=terraform/bootstrap init
 terraform -chdir=terraform/bootstrap plan -out=bootstrap.tfplan
 ```
 
-Review the plan: expect `18 to add` with `create_oidc_provider = true`, or `17 to add` if the account already has the GitHub OIDC provider (`create_oidc_provider = false`). Check that `aws_s3_bucket_policy.state` contains `DenyInsecureTransport` and `DenyNonAES256ObjectUploads`, **each with a `Condition`**. Then:
+Review the plan: expect `18 to add` with `create_oidc_provider = true`, or `17 to add` if the account already has the GitHub OIDC provider (`create_oidc_provider = false`). Check that `aws_s3_bucket_policy.state` contains exactly `DenyInsecureTransport`, `DenyExplicitNonAES256Encryption` (with **both** `Null` and `StringNotEquals`) and `DenySSECustomerKeys`, and that **no** condition uses `...IfExists`. Then:
 
 ```bash
 terraform -chdir=terraform/bootstrap apply bootstrap.tfplan

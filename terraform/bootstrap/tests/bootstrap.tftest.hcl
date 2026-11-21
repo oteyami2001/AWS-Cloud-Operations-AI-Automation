@@ -89,7 +89,7 @@ run "plan_role_is_describe_only" {
 }
 
 run "state_bucket_is_private_versioned_encrypted" {
-  command = plan
+  command = apply # mocked provider: resolves the rendered bucket policy, creates nothing
   assert {
     condition     = aws_s3_bucket_public_access_block.state.block_public_acls && aws_s3_bucket_public_access_block.state.block_public_policy && aws_s3_bucket_public_access_block.state.ignore_public_acls && aws_s3_bucket_public_access_block.state.restrict_public_buckets
     error_message = "state bucket must block all public access"
@@ -102,23 +102,36 @@ run "state_bucket_is_private_versioned_encrypted" {
     condition     = one(one(aws_s3_bucket_server_side_encryption_configuration.state.rule).apply_server_side_encryption_by_default).sse_algorithm == "AES256"
     error_message = "state bucket must be encrypted"
   }
+  # The rendered policy is what AWS receives. Full request-level IAM evaluation lives in
+  # tests/unit/test_state_bucket_policy.py; these assertions guard the structure from Terraform.
   assert {
-    condition     = length([for s in data.aws_iam_policy_document.state_bucket.statement : s if s.sid == "DenyInsecureTransport"]) == 1
-    error_message = "state bucket must deny non-TLS access"
+    condition = anytrue([for s in jsondecode(aws_s3_bucket_policy.state.policy).Statement :
+      s.Sid == "DenyInsecureTransport" && s.Effect == "Deny" && s.Action == "s3:*" &&
+      try(s.Condition.Bool["aws:SecureTransport"], "") == "false" &&
+    toset(s.Resource) == toset(["arn:aws:s3:::aiops-tfstate-123456789012-us-east-1", "arn:aws:s3:::aiops-tfstate-123456789012-us-east-1/*"])])
+    error_message = "state bucket must deny every non-TLS request to the bucket and its objects"
   }
-  # Regression guard: an unconditional Deny in the bucket policy would lock Terraform out of its
-  # own state (e.g. a Deny s3:PutObject without its encryption condition).
+  # Regression guard 1: an unconditional Deny locks Terraform out of its own state.
   assert {
-    condition = alltrue([for s in data.aws_iam_policy_document.state_bucket.statement :
-    length(coalesce(s.condition, [])) > 0 if s.effect == "Deny"])
+    condition     = alltrue([for s in jsondecode(aws_s3_bucket_policy.state.policy).Statement : length(try(s.Condition, {})) > 0 if s.Effect == "Deny"])
     error_message = "every Deny statement in the state bucket policy must have a condition (an unconditional Deny blocks Terraform state writes)"
   }
+  # Regression guard 2: in a Deny, ...IfExists and negated operators evaluate to TRUE when the key
+  # is absent, which denies default-encrypted uploads and multipart UploadPart requests. Negated
+  # operators are only safe with a Null = "false" guard on the same key (deny only when present).
   assert {
-    condition = anytrue([for s in data.aws_iam_policy_document.state_bucket.statement :
-      s.sid == "DenyNonAES256ObjectUploads" && anytrue([for c in coalesce(s.condition, []) :
-        c.test == "StringNotEqualsIfExists" && c.variable == "s3:x-amz-server-side-encryption" && toset(c.values) == toset(["AES256"])
-    ])])
-    error_message = "PutObject deny must apply only when a non-AES256 encryption header is sent (IfExists), so default-encrypted uploads still work"
+    condition = alltrue(flatten([for s in jsondecode(aws_s3_bucket_policy.state.policy).Statement : [
+      for op, keys in try(s.Condition, {}) : [
+        for k, v in keys : !endswith(op, "IfExists") && (!startswith(op, "StringNot") || try(s.Condition.Null[k], "") == "false")
+      ]
+    ] if s.Effect == "Deny"]))
+    error_message = "Deny conditions must not use ...IfExists, and negated operators need a Null=false guard on the same key (absent keys otherwise DENY)"
+  }
+  assert {
+    condition = anytrue([for s in jsondecode(aws_s3_bucket_policy.state.policy).Statement :
+      s.Action == "s3:PutObject" && try(s.Condition.Null["s3:x-amz-server-side-encryption"], "") == "false" &&
+    try(s.Condition.StringNotEquals["s3:x-amz-server-side-encryption"], "") == "AES256"])
+    error_message = "uploads that explicitly request a non-AES256 encryption must be denied"
   }
 }
 

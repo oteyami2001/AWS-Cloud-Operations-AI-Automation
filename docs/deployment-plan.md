@@ -115,6 +115,16 @@ If the second command already lists `token.actions.githubusercontent.com`, set `
 
 ### 1. 💲 Bootstrap: state, OIDC roles, boundary, ECR, budget
 
+> **Recommended:** `scripts/bootstrap_resume.sh` runs steps 1–2 below as one gated, re-runnable
+> sequence:
+> - checks the AWS account and backs up local state;
+> - refuses plans that change or destroy anything;
+> - asks you to type `apply`, then verifies the bucket's versioning, encryption, public-access block and policy;
+> - asks you to type `migrate`, then moves the state into S3 and verifies all 18 resources.
+>
+> It also handles a partial apply. Credentials come from the CLI profile and are never printed.
+
+
 ```bash
 cp terraform/bootstrap/terraform.tfvars.example terraform/bootstrap/terraform.tfvars
 ```

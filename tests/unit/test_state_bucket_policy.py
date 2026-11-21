@@ -107,7 +107,13 @@ SCENARIOS = [
     ("upload requesting DSSE-KMS", "s3:PutObject", STATE_KEY, {**TLS, SSE: "aws:kms:dsse"}, True),
     ("upload with SSE-C customer key", "s3:PutObject", STATE_KEY, {**TLS, SSE_C: "AES256"}, True),
     ("any request over plain HTTP", "s3:GetObject", STATE_KEY, {"aws:SecureTransport": "false"}, True),
-    ("PutObject over plain HTTP even with AES256", "s3:PutObject", STATE_KEY, {"aws:SecureTransport": "false", SSE: "AES256"}, True),
+    (
+        "PutObject over plain HTTP even with AES256",
+        "s3:PutObject",
+        STATE_KEY,
+        {"aws:SecureTransport": "false", SSE: "AES256"},
+        True,
+    ),
 ]
 
 

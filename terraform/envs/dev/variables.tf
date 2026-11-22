@@ -97,7 +97,11 @@ variable "require_mfa" {
 }
 
 variable "alert_email" {
-  description = "E-mail for incident / platform alerts (SNS). Must be confirmed via the AWS e-mail."
+  description = "E-mail for incident / platform alerts (SNS). Must be confirmed via the AWS e-mail. Surrounding whitespace is ignored."
   type        = string
   default     = ""
+  validation {
+    condition     = trimspace(var.alert_email) == "" || can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", trimspace(var.alert_email)))
+    error_message = "alert_email must be empty or a valid e-mail address."
+  }
 }

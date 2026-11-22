@@ -111,6 +111,18 @@ run "plan_role_is_describe_only" {
   }
 }
 
+# The ephemeral fault token is opened during PLAN, so the read-only plan role needs
+# GetRandomPassword (it returns a random string and touches no stored secret).
+run "plan_role_can_open_ephemeral_fault_token" {
+  command = plan
+  assert {
+    condition = anytrue([for s in data.aws_iam_policy_document.plan.statement :
+      s.sid == "GenerateEphemeralRandomPassword" && contains(s.actions, "secretsmanager:GetRandomPassword") &&
+    anytrue([for c in coalesce(s.condition, []) : c.variable == "aws:RequestedRegion" && contains(c.values, "us-east-2")])])
+    error_message = "plan role must be able to call secretsmanager:GetRandomPassword (region-scoped) to plan the ephemeral fault token"
+  }
+}
+
 run "state_bucket_is_private_versioned_encrypted" {
   command = apply # mocked provider: resolves the rendered bucket policy, creates nothing
   assert {

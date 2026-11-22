@@ -55,7 +55,7 @@ build: ## Build build/lambda.zip
 # ---- AWS (billable) -------------------------------------------------------------------
 push-image: ## [AWS] Build and push the sample app image to the bootstrap ECR repository (TAG=v1)
 	@REPO=$$(terraform -chdir=terraform/bootstrap output -raw ecr_repository_url); TAG=$${TAG:-v1}; \
-	aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $${REPO%%/*} && \
+	aws ecr get-login-password --region $${AWS_REGION:-us-east-2} | docker login --username AWS --password-stdin $${REPO%%/*} && \
 	docker build -t $$REPO:$$TAG src/sample_app && docker push $$REPO:$$TAG
 
 plan: build ## [AWS read-only] terraform plan

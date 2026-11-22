@@ -39,7 +39,7 @@ class Config:
         return cls(
             table_name=env.get("INCIDENT_TABLE", "aiops-incidents"),
             topic_arn=env.get("NOTIFY_TOPIC_ARN", ""),
-            region=env.get("AWS_REGION", "us-east-1"),
+            region=env.get("AWS_REGION", "us-east-2"),
             name_prefix=env.get("NAME_PREFIX", "aiops-dev"),
             cluster=env.get("ECS_CLUSTER", ""),
             service=env.get("ECS_SERVICE", ""),

@@ -20,7 +20,7 @@ flowchart LR
 | `ci.yml` | every push / PR | none | lint, SAST, tests, Terraform validate/test, tflint, Checkov, Docker build + Trivy |
 | `image.yml` | manual, `main` only | `aiops-github-image-push` | push one immutable tag to one ECR repository |
 | `deploy.yml` plan | manual, `main` only | `aiops-github-plan` | read-only describe + state lock |
-| `deploy.yml` apply/destroy | after `aws-dev` approval | `aiops-github-apply` | create/update/destroy `envs/dev` in `us-east-1` within the permissions boundary |
+| `deploy.yml` apply/destroy | after `aws-dev` approval | `aiops-github-apply` | create/update/destroy `envs/dev` in `us-east-2` within the permissions boundary |
 
 ## Local development (no AWS)
 

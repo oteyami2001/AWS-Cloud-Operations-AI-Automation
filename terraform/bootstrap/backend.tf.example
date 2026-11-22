@@ -2,9 +2,9 @@
 # then run: terraform init -migrate-state
 terraform {
   backend "s3" {
-    bucket       = "aiops-tfstate-<account-id>-us-east-1"
+    bucket       = "aiops-tfstate-<account-id>-us-east-2"
     key          = "bootstrap/terraform.tfstate"
-    region       = "us-east-1"
+    region       = "us-east-2"
     encrypt      = true
     use_lockfile = true
   }

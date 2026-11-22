@@ -19,7 +19,7 @@ set -euo pipefail
 
 EXPECTED_ACCOUNT="${EXPECTED_ACCOUNT:-666102401492}"
 PROFILE="${AWS_PROFILE:-aiops-dev}"
-REGION="${AWS_REGION:-us-east-1}"
+REGION="${AWS_REGION:-us-east-2}" # us-east-1 is denied by the organization SCP (ADR 0003)
 TF_DIR="terraform/bootstrap"
 BUCKET="aiops-tfstate-${EXPECTED_ACCOUNT}-${REGION}"
 EXPECTED_TOTAL=18
@@ -133,11 +133,18 @@ print("   OK  bucket policy: 3 conditional Deny statements, no IfExists")
 
 # --- 6. migrate state --------------------------------------------------------------------
 say "6/6  Move bootstrap state into S3"
-if [ ! -f "$TF_DIR/backend.tf" ]; then
-  if [ -f "$TF_DIR/backend.tf.pending" ]; then mv "$TF_DIR/backend.tf.pending" "$TF_DIR/backend.tf"
-  else sed "s/aiops-tfstate-<account-id>-us-east-1/$BUCKET/" "$TF_DIR/backend.tf.example" > "$TF_DIR/backend.tf"; fi
-fi
+# backend.tf is generated (git-ignored). Always regenerate it from the example so a leftover file
+# from an earlier attempt (e.g. pointing at a different region's bucket) can never be used.
+for old in "$TF_DIR/backend.tf" "$TF_DIR/backend.tf.pending"; do
+  if [ -f "$old" ] && ! grep -q "bucket *= *\"$BUCKET\"" "$old"; then
+    mv "$old" "$old.stale-$(date +%Y%m%d-%H%M%S)"
+    ok "kept outdated $(basename "$old") as $(basename "$old").stale-* (pointed at a different bucket)"
+  fi
+done
+sed -e "s/aiops-tfstate-<account-id>-[a-z0-9-]*/$BUCKET/" -e "s/^\( *region *= *\)\"[a-z0-9-]*\"/\1\"$REGION\"/" \
+  "$TF_DIR/backend.tf.example" > "$TF_DIR/backend.tf"
 grep -q "bucket *= *\"$BUCKET\"" "$TF_DIR/backend.tf" || fail "backend.tf does not point at $BUCKET"
+grep -q "region *= *\"$REGION\"" "$TF_DIR/backend.tf" || fail "backend.tf region is not $REGION"
 ok "backend.tf -> s3://$BUCKET/bootstrap/terraform.tfstate"
 read -r -p "   Type 'migrate' to copy local state into S3, anything else to stop: " answer
 [ "$answer" = "migrate" ] || fail "stopped by you before migration (resources exist; state is still local and backed up)"

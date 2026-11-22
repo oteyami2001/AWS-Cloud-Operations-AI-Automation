@@ -27,7 +27,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = ROOT / "terraform" / "bootstrap" / "policies" / "state_bucket_policy.json.tftpl"
-BUCKET = "arn:aws:s3:::aiops-tfstate-123456789012-us-east-1"
+BUCKET = "arn:aws:s3:::aiops-tfstate-123456789012-us-east-2"
 STATE_KEY = f"{BUCKET}/envs/dev/terraform.tfstate"
 LOCK_KEY = f"{BUCKET}/envs/dev/terraform.tfstate.tflock"
 SSE = "s3:x-amz-server-side-encryption"

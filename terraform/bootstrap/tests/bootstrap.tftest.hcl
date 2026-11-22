@@ -17,10 +17,10 @@ mock_provider "aws" {
     defaults = { arn = "arn:aws:iam::123456789012:policy/aiops-dev-workload-boundary" }
   }
   mock_resource "aws_s3_bucket" {
-    defaults = { arn = "arn:aws:s3:::aiops-tfstate-123456789012-us-east-1" }
+    defaults = { arn = "arn:aws:s3:::aiops-tfstate-123456789012-us-east-2" }
   }
   mock_resource "aws_ecr_repository" {
-    defaults = { arn = "arn:aws:ecr:us-east-1:123456789012:repository/aiops-sample-app" }
+    defaults = { arn = "arn:aws:ecr:us-east-2:123456789012:repository/aiops-sample-app" }
   }
 }
 
@@ -69,7 +69,7 @@ run "apply_role_cannot_escalate" {
     error_message = "apply role must not have wildcard or iam:* allows"
   }
   assert {
-    condition     = alltrue([for c in one([for s in data.aws_iam_policy_document.apply.statement : s if s.sid == "ProjectServicesInRegion"]).condition : c.variable == "aws:RequestedRegion" && contains(c.values, "us-east-1")])
+    condition     = alltrue([for c in one([for s in data.aws_iam_policy_document.apply.statement : s if s.sid == "ProjectServicesInRegion"]).condition : c.variable == "aws:RequestedRegion" && contains(c.values, "us-east-2")])
     error_message = "service permissions must be limited to the deployment region"
   }
 }
@@ -108,7 +108,7 @@ run "state_bucket_is_private_versioned_encrypted" {
     condition = anytrue([for s in jsondecode(aws_s3_bucket_policy.state.policy).Statement :
       s.Sid == "DenyInsecureTransport" && s.Effect == "Deny" && s.Action == "s3:*" &&
       try(s.Condition.Bool["aws:SecureTransport"], "") == "false" &&
-    toset(s.Resource) == toset(["arn:aws:s3:::aiops-tfstate-123456789012-us-east-1", "arn:aws:s3:::aiops-tfstate-123456789012-us-east-1/*"])])
+    toset(s.Resource) == toset(["arn:aws:s3:::aiops-tfstate-123456789012-us-east-2", "arn:aws:s3:::aiops-tfstate-123456789012-us-east-2/*"])])
     error_message = "state bucket must deny every non-TLS request to the bucket and its objects"
   }
   # Regression guard 1: an unconditional Deny locks Terraform out of its own state.

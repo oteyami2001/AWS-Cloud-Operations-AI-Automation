@@ -66,7 +66,7 @@ unless it is SigV4-signed by the operator role.
 | Item | Configuration | Verdict |
 |---|---|---|
 | GitHub OIDC provider | `token.actions.githubusercontent.com`, audience `sts.amazonaws.com`. `create_oidc_provider=false` if the account already has one | ✅ |
-| Plan role trust | `StringEquals` on `sub` = `repo:oteyami2001/AWS-Cloud-Operations-AI-Automation:ref:refs/heads/main` or `…:pull_request`. Audience pinned | ✅ exact match, no wildcards (tested) |
+| Plan role trust | `StringEquals` on `sub` = `repo:oteyami2001@157901928/AWS-Cloud-Operations-AI-Automation@1465569992:ref:refs/heads/main` (immutable subject, see section 8) or `…:pull_request`. Audience pinned | ✅ exact match, no wildcards (tested) |
 | Apply role trust | `sub` = `…:environment:aws-dev` **only** | ✅ but **depends on you** configuring the `aws-dev` environment with a required reviewer and deployment branch `main` |
 | Image-push role trust | `…:ref:refs/heads/main` only; ECR push to the one repository | ✅ |
 | Plan role permissions | Describe/List/Get metadata for the services in use. **No** S3 object reads outside state, DynamoDB items, log events, SQS messages, SSM parameters, image layers, or KMS decrypt. One exception: `GetSecretValue` on the demo fault token, needed to refresh the secret version | ✅ (tested) |
@@ -204,4 +204,36 @@ rules. It is not the AWS policy engine. Before relying on it in production, conf
 Policy Simulator or IAM Access Analyzer `check-access-not-granted` after bootstrap. With the
 `templatefile` policy, Checkov's generic IAM checks no longer apply to this document (406 → 395
 passed checks); the semantic test replaces them.
+
+## 8. Addendum 2026-11-22: GitHub immutable OIDC subjects
+
+**Symptom:** the first `image` and `deploy` runs failed at `configure-aws-credentials` with
+`Not authorized to perform sts:AssumeRoleWithWebIdentity`. Before that step, the image built and
+passed the Trivy gate.
+
+**Root cause (from CloudTrail and the GitHub API, not a guess):** the repository uses **immutable OIDC
+subjects** (`actions/oidc/customization/sub` → `"use_immutable_subject": true`), so GitHub sends
+
+```
+repo:oteyami2001@157901928/AWS-Cloud-Operations-AI-Automation@1465569992:ref:refs/heads/main
+```
+
+while the trust policies expected the classic `repo:oteyami2001/AWS-Cloud-Operations-AI-Automation:…`.
+
+**Fix:** keep immutable subjects, which are the stronger setting: a deleted-and-recreated or renamed
+repository cannot match the numeric IDs. The trust policies now build the prefix from
+`github_owner_id` (157901928) and `github_repository_id` (1465569992), with
+`github_oidc_immutable_subject = true` by default. Matching stays exact (`StringEquals`, no wildcards).
+The classic format is still available by setting the variable to `false`.
+
+**Tests:**
+
+- `oidc_trust_is_exact_and_audience_bound` asserts the exact immutable subjects for the plan, apply
+  and image-push roles;
+- `oidc_trust_supports_classic_subject_format` covers the classic format;
+- `oidc_ids_must_be_numeric` rejects non-numeric IDs.
+
+**Deployment impact:** applying the change updates the trust policy of 3 existing roles **in place**
+(`aiops-github-plan`, `-apply`, `-image-push`). Nothing is created or destroyed. Because the gated
+resume script only accepts additions, this change is applied with a direct, reviewed plan/apply.
 

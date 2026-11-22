@@ -32,13 +32,13 @@ run "oidc_trust_is_exact_and_audience_bound" {
   command = plan
 
   assert {
-    condition     = toset(flatten([for c in data.aws_iam_policy_document.github_trust["apply"].statement[0].condition : c.values if c.variable == "token.actions.githubusercontent.com:sub"])) == toset(["repo:oteyami2001/AWS-Cloud-Operations-AI-Automation:environment:aws-dev"])
+    condition     = toset(flatten([for c in data.aws_iam_policy_document.github_trust["apply"].statement[0].condition : c.values if c.variable == "token.actions.githubusercontent.com:sub"])) == toset(["repo:oteyami2001@157901928/AWS-Cloud-Operations-AI-Automation@1465569992:environment:aws-dev"])
     error_message = "apply role must trust ONLY the protected aws-dev GitHub environment"
   }
   assert {
     condition = toset(flatten([for c in data.aws_iam_policy_document.github_trust["plan"].statement[0].condition : c.values if c.variable == "token.actions.githubusercontent.com:sub"])) == toset([
-      "repo:oteyami2001/AWS-Cloud-Operations-AI-Automation:ref:refs/heads/main",
-      "repo:oteyami2001/AWS-Cloud-Operations-AI-Automation:pull_request",
+      "repo:oteyami2001@157901928/AWS-Cloud-Operations-AI-Automation@1465569992:ref:refs/heads/main",
+      "repo:oteyami2001@157901928/AWS-Cloud-Operations-AI-Automation@1465569992:pull_request",
     ])
     error_message = "plan role must trust only main and pull requests of this repository"
   }
@@ -49,6 +49,29 @@ run "oidc_trust_is_exact_and_audience_bound" {
     ])
     error_message = "every trust policy must use StringEquals (no wildcards) and pin the sts.amazonaws.com audience"
   }
+}
+
+# Repositories without immutable OIDC subjects send the classic "repo:OWNER/REPO:..." form.
+run "oidc_trust_supports_classic_subject_format" {
+  command = plan
+  variables {
+    github_oidc_immutable_subject = false
+  }
+  assert {
+    condition = toset(flatten([for c in data.aws_iam_policy_document.github_trust["plan"].statement[0].condition : c.values if c.variable == "token.actions.githubusercontent.com:sub"])) == toset([
+      "repo:oteyami2001/AWS-Cloud-Operations-AI-Automation:ref:refs/heads/main",
+      "repo:oteyami2001/AWS-Cloud-Operations-AI-Automation:pull_request",
+    ])
+    error_message = "classic subject format must still be supported when immutable subjects are off"
+  }
+}
+
+run "oidc_ids_must_be_numeric" {
+  command = plan
+  variables {
+    github_repository_id = "AWS-Cloud-Operations-AI-Automation"
+  }
+  expect_failures = [var.github_repository_id]
 }
 
 run "apply_role_cannot_escalate" {

@@ -8,6 +8,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Explicit bash => GitHub runs every step with `bash --noprofile --norc -eo pipefail`, so a failure
+# anywhere in a pipeline (e.g. `terraform plan | tee plan.txt`) fails the step instead of passing.
+defaults:
+  run:
+    shell: bash
+
 permissions:
   contents: read
 

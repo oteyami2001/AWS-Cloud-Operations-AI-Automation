@@ -23,6 +23,12 @@ on:
         description: Sample-app image tag (must exist in ECR)
         default: v1
 
+# Explicit bash => GitHub runs every step with `bash --noprofile --norc -eo pipefail`, so a failure
+# anywhere in a pipeline (e.g. `terraform plan | tee plan.txt`) fails the step instead of passing.
+defaults:
+  run:
+    shell: bash
+
 permissions:
   contents: read
   id-token: write # OIDC - no long-lived AWS keys

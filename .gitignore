@@ -34,3 +34,7 @@ build/
 # Provider lock files were generated from a single-platform mirror; regenerate with
 # `terraform providers lock -platform=linux_amd64 -platform=darwin_arm64` before committing.
 .terraform.lock.hcl
+
+# Local logs / backups produced by scripts/bootstrap_resume.sh
+bootstrap-*.log
+*.stale-*

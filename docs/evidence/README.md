@@ -41,7 +41,7 @@ Redact your public IP, e-mail and load balancer DNS name before committing scree
 - [ ] Scenario A: `approve.py --show` output → `aws/scenarioA-show.txt`
 - [ ] Scenario A: approval response + SSM execution succeeded → `aws/scenarioA-ssm.png`
 - [ ] Scenario A: incident `RESOLVED` with history on the dashboard → `aws/scenarioA-dashboard.png`
-- [x] Scenario B: incident opened, self-healed and auto-resolved (MTTR 118 s) → [`aws/scenarioB-sns-incident.png`](aws/scenarioB-sns-incident.png), [`aws/scenarioB-sns-resolved.png`](aws/scenarioB-sns-resolved.png), [`aws/scenarioB-alarms.png`](aws/scenarioB-alarms.png); dashboard table → `aws/scenarioB-dashboard.png` (to add)
+- [x] Scenario B: incident opened, self-healed and auto-resolved (MTTR 118 s) → [`aws/scenarioB-sns-incident.png`](aws/scenarioB-sns-incident.png), [`aws/scenarioB-sns-resolved.png`](aws/scenarioB-sns-resolved.png), [`aws/scenarioB-alarms.png`](aws/scenarioB-alarms.png); dashboard table → [`aws/scenarioB-dashboard.png`](aws/scenarioB-dashboard.png)
 - [ ] Scenario C: SSM execution waiting at `SecondApproval` → `aws/scenarioC-waiting.png`
 - [ ] Bedrock-generated analysis (`engine = bedrock:…`) → `aws/bedrock-analysis.png`
 - [ ] Bedrock fallback (access removed → `engine = rules` + rationale) → `aws/bedrock-fallback.png`

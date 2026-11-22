@@ -25,6 +25,32 @@ variable "github_repository" {
   }
 }
 
+variable "github_oidc_immutable_subject" {
+  description = "true if the repository's OIDC subject uses immutable IDs (gh api repos/OWNER/REPO/actions/oidc/customization/sub -> use_immutable_subject)."
+  type        = bool
+  default     = true
+}
+
+variable "github_owner_id" {
+  description = "Numeric GitHub owner (user/org) ID, used in immutable OIDC subjects. Not a secret."
+  type        = string
+  default     = "157901928"
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_owner_id))
+    error_message = "github_owner_id must be numeric."
+  }
+}
+
+variable "github_repository_id" {
+  description = "Numeric GitHub repository ID, used in immutable OIDC subjects. Not a secret."
+  type        = string
+  default     = "1465569992"
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_id))
+    error_message = "github_repository_id must be numeric."
+  }
+}
+
 variable "github_deploy_environment" {
   description = "GitHub environment (with required reviewers) that the apply role trusts."
   type        = string

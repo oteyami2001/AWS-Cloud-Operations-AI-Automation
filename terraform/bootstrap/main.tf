@@ -35,5 +35,10 @@ locals {
   partition = data.aws_partition.current.partition
   # Every IAM role / policy the CI apply role may manage must start with this prefix.
   workload_prefix = "${var.project}-${var.environment}-"
-  oidc_sub_prefix = "repo:${var.github_repository}"
+  # GitHub OIDC `sub` prefix. With immutable subjects (repository setting
+  # actions/oidc/customization/sub -> use_immutable_subject = true) GitHub appends the numeric owner
+  # and repository IDs, so a deleted-and-recreated or renamed repository can never match.
+  github_owner    = split("/", var.github_repository)[0]
+  github_repo     = split("/", var.github_repository)[1]
+  oidc_sub_prefix = var.github_oidc_immutable_subject ? "repo:${local.github_owner}@${var.github_owner_id}/${local.github_repo}@${var.github_repository_id}" : "repo:${var.github_repository}"
 }

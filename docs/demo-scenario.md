@@ -19,6 +19,9 @@ the dashboard and a terminal side by side.
 **Scenario B (optional, unhealthy task):** `simulate_incident.sh unhealthy` → `unhealthy-targets`
 ALARM → incident opened → ECS replaces the failing task by itself → alarm OK → incident
 auto-`RESOLVED` with no human action (shows the platform also documents self-healing).
+Observed in AWS: ECS replaced the task in about a minute, so `app-errors` (from the logged health-check
+errors) fired instead of `unhealthy-targets`; the incident was `APPLICATION_ERRORS` and auto-resolved with
+MTTR 118 s. See [`deployment-log.md`](deployment-log.md#scenario-b-unhealthy-task-run-on-2026-11-22-windows-powershell).
 
 Reset after each scenario: `scripts/simulate_incident.sh reset` (and for A, the approved runbook
 restores the desired count).

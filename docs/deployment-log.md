@@ -67,7 +67,8 @@ the task became healthy. It is a deployment-time false positive (see follow-ups)
 
 Evidence: [`evidence/aws/scenarioB-sns-incident.png`](evidence/aws/scenarioB-sns-incident.png),
 [`scenarioB-sns-resolved.png`](evidence/aws/scenarioB-sns-resolved.png),
-[`scenarioB-alarms.png`](evidence/aws/scenarioB-alarms.png).
+[`scenarioB-alarms.png`](evidence/aws/scenarioB-alarms.png),
+[`scenarioB-dashboard.png`](evidence/aws/scenarioB-dashboard.png).
 
 ## Guardrails that held
 

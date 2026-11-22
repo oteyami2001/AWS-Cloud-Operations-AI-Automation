@@ -162,6 +162,10 @@ Scenario B (unhealthy task): the incident e-mail with the analysis and the recom
 
 ![SNS resolved e-mail: MTTR 118 seconds](docs/evidence/aws/scenarioB-sns-resolved.png)
 
+The operations dashboard keeps every incident with its severity, probable cause, recommendation and how it ended:
+
+![Dashboard incident table: two incidents, both RESOLVED by the system](docs/evidence/aws/scenarioB-dashboard.png)
+
 The full story, including every failure and its fix, is in [`docs/deployment-log.md`](docs/deployment-log.md).
 
 ## Evidence

@@ -1,7 +1,7 @@
-# Cost estimate (us-east-1)
+# Cost estimate (us-east-2)
 
 The detailed, line-item estimate, including minimum billable periods and persistent charges, is in
-**[`deployment-plan.md` → Cost estimate](deployment-plan.md#cost-estimate-us-east-1-on-demand-list-prices-verify-with-the-aws-pricing-calculator)**.
+**[`deployment-plan.md` → Cost estimate](deployment-plan.md#cost-estimate-us-east-2-on-demand-list-prices-verify-with-the-aws-pricing-calculator)**.
 These are estimates from public on-demand list prices; verify them with the [AWS Pricing Calculator](https://calculator.aws/).
 
 | Scenario | Estimate |

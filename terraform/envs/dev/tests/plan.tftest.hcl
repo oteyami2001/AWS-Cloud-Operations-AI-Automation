@@ -7,82 +7,82 @@ mock_provider "aws" {
     defaults = { account_id = "123456789012" }
   }
   mock_data "aws_region" {
-    defaults = { name = "us-east-1" }
+    defaults = { name = "us-east-2" }
   }
   mock_data "aws_partition" {
     defaults = { partition = "aws" }
   }
   mock_data "aws_availability_zones" {
-    defaults = { names = ["us-east-1a", "us-east-1b"] }
+    defaults = { names = ["us-east-2a", "us-east-2b"] }
   }
   mock_data "aws_iam_policy_document" {
     defaults = { json = "{\"Version\":\"2012-10-17\",\"Statement\":[]}" }
   }
   mock_resource "aws_kms_key" {
-    defaults = { arn = "arn:aws:kms:us-east-1:123456789012:key/00000000-0000-0000-0000-000000000000" }
+    defaults = { arn = "arn:aws:kms:us-east-2:123456789012:key/00000000-0000-0000-0000-000000000000" }
   }
   mock_resource "aws_ecs_service" {
-    defaults = { id = "arn:aws:ecs:us-east-1:123456789012:service/aiops-dev-cluster/aiops-dev-app" }
+    defaults = { id = "arn:aws:ecs:us-east-2:123456789012:service/aiops-dev-cluster/aiops-dev-app" }
   }
   mock_resource "aws_ecs_cluster" {
-    defaults = { arn = "arn:aws:ecs:us-east-1:123456789012:cluster/aiops-dev-cluster" }
+    defaults = { arn = "arn:aws:ecs:us-east-2:123456789012:cluster/aiops-dev-cluster" }
   }
   mock_resource "aws_iam_role" {
     defaults = { arn = "arn:aws:iam::123456789012:role/mock" }
   }
   mock_resource "aws_lambda_function" {
-    defaults = { arn = "arn:aws:lambda:us-east-1:123456789012:function:mock" }
+    defaults = { arn = "arn:aws:lambda:us-east-2:123456789012:function:mock" }
   }
   mock_resource "aws_sqs_queue" {
-    defaults = { arn = "arn:aws:sqs:us-east-1:123456789012:mock" }
+    defaults = { arn = "arn:aws:sqs:us-east-2:123456789012:mock" }
   }
   mock_resource "aws_cloudwatch_log_group" {
-    defaults = { arn = "arn:aws:logs:us-east-1:123456789012:log-group:mock" }
+    defaults = { arn = "arn:aws:logs:us-east-2:123456789012:log-group:mock" }
   }
   mock_resource "aws_cloudwatch_metric_alarm" {
-    defaults = { arn = "arn:aws:cloudwatch:us-east-1:123456789012:alarm:mock" }
+    defaults = { arn = "arn:aws:cloudwatch:us-east-2:123456789012:alarm:mock" }
   }
   mock_resource "aws_cloudwatch_event_rule" {
-    defaults = { arn = "arn:aws:events:us-east-1:123456789012:rule/mock" }
+    defaults = { arn = "arn:aws:events:us-east-2:123456789012:rule/mock" }
   }
   mock_resource "aws_dynamodb_table" {
-    defaults = { arn = "arn:aws:dynamodb:us-east-1:123456789012:table/mock" }
+    defaults = { arn = "arn:aws:dynamodb:us-east-2:123456789012:table/mock" }
   }
   mock_resource "aws_sns_topic" {
-    defaults = { arn = "arn:aws:sns:us-east-1:123456789012:mock" }
+    defaults = { arn = "arn:aws:sns:us-east-2:123456789012:mock" }
   }
   mock_data "aws_iam_policy" {
     defaults = { arn = "arn:aws:iam::123456789012:policy/aiops-dev-workload-boundary" }
   }
   mock_data "aws_ecr_repository" {
     defaults = {
-      arn            = "arn:aws:ecr:us-east-1:123456789012:repository/aiops-sample-app"
-      repository_url = "123456789012.dkr.ecr.us-east-1.amazonaws.com/aiops-sample-app"
+      arn            = "arn:aws:ecr:us-east-2:123456789012:repository/aiops-sample-app"
+      repository_url = "123456789012.dkr.ecr.us-east-2.amazonaws.com/aiops-sample-app"
     }
   }
   mock_data "aws_ecr_image" {
     defaults = { image_digest = "sha256:0000000000000000000000000000000000000000000000000000000000000000" }
   }
   mock_resource "aws_secretsmanager_secret" {
-    defaults = { arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:mock" }
+    defaults = { arn = "arn:aws:secretsmanager:us-east-2:123456789012:secret:mock" }
   }
   mock_resource "aws_lb" {
     defaults = {
-      arn        = "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/aiops-dev-alb/0123456789abcdef"
+      arn        = "arn:aws:elasticloadbalancing:us-east-2:123456789012:loadbalancer/app/aiops-dev-alb/0123456789abcdef"
       arn_suffix = "app/aiops-dev-alb/0123456789abcdef"
     }
   }
   mock_resource "aws_lb_target_group" {
     defaults = {
-      arn        = "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/aiops-dev-tg/0123456789abcdef"
+      arn        = "arn:aws:elasticloadbalancing:us-east-2:123456789012:targetgroup/aiops-dev-tg/0123456789abcdef"
       arn_suffix = "targetgroup/aiops-dev-tg/0123456789abcdef"
     }
   }
   mock_resource "aws_ssm_document" {
-    defaults = { arn = "arn:aws:ssm:us-east-1:123456789012:document/mock" }
+    defaults = { arn = "arn:aws:ssm:us-east-2:123456789012:document/mock" }
   }
   mock_resource "aws_lambda_function_url" {
-    defaults = { function_url = "https://mock.lambda-url.us-east-1.on.aws/" }
+    defaults = { function_url = "https://mock.lambda-url.us-east-2.on.aws/" }
   }
 }
 
@@ -107,7 +107,7 @@ run "full_stack_mock_apply" {
   }
 
   assert {
-    condition     = startswith(output.dashboard_url, "https://us-east-1.console.aws.amazon.com/cloudwatch/")
+    condition     = startswith(output.dashboard_url, "https://us-east-2.console.aws.amazon.com/cloudwatch/")
     error_message = "dashboard URL output malformed"
   }
 
@@ -128,7 +128,7 @@ run "bedrock_off_by_default" {
 run "image_is_pinned_by_digest" {
   command = plan
   assert {
-    condition     = output.container_image == "123456789012.dkr.ecr.us-east-1.amazonaws.com/aiops-sample-app@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    condition     = output.container_image == "123456789012.dkr.ecr.us-east-2.amazonaws.com/aiops-sample-app@sha256:0000000000000000000000000000000000000000000000000000000000000000"
     error_message = "task definition must reference the ECR image by immutable digest"
   }
 }

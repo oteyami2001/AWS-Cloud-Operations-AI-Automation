@@ -1,5 +1,5 @@
 # Copy to terraform.tfvars (git-ignored).
-region            = "us-east-1"
+region            = "us-east-2"
 github_repository = "oteyami2001/AWS-Cloud-Operations-AI-Automation"
 budget_email      = "you@example.com" # confirm before applying
 monthly_budget_usd = 30

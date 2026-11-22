@@ -1,9 +1,9 @@
 # Copy to backend.tf (git-ignored) and set the bucket from `terraform -chdir=terraform/bootstrap output state_bucket`.
 terraform {
   backend "s3" {
-    bucket       = "aiops-tfstate-<account-id>-us-east-1"
+    bucket       = "aiops-tfstate-<account-id>-us-east-2"
     key          = "envs/dev/terraform.tfstate"
-    region       = "us-east-1"
+    region       = "us-east-2"
     encrypt      = true
     use_lockfile = true # S3-native state locking (no DynamoDB table)
   }

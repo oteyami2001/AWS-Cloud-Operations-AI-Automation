@@ -9,8 +9,9 @@ variable "environment" {
 }
 
 variable "region" {
-  type    = string
-  default = "us-east-1"
+  description = "Deployment region. us-east-2: the AWS Organization's SCP denies us-east-1 for regional services (ADR 0003)."
+  type        = string
+  default     = "us-east-2"
 }
 
 variable "owner" {

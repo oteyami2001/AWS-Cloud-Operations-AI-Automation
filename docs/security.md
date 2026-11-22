@@ -38,7 +38,7 @@
   - The plan role (describe-only, no data reads) trusts `main` and pull requests.
   - The image-push role (one ECR repository) trusts `main`.
   - The apply role trusts only the reviewer-gated `aws-dev` environment. It is limited to the
-    services in use in `us-east-1`, and may create IAM roles only when the
+    services in use in `us-east-2`, and may create IAM roles only when the
     `aiops-dev-workload-boundary` permissions boundary is attached.
   - Explicit denies cover boundary removal, IAM users/keys, Organizations, CloudTrail tampering and
     the CI roles themselves.

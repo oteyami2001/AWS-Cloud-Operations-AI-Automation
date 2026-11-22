@@ -7,7 +7,7 @@
 
 | # | Decision | Implementation |
 |---|---|---|
-| 1 | Region `us-east-1` | `region` default in bootstrap and envs/dev |
+| 1 | Region **`us-east-2`** (was us-east-1; the organization's SCP denies us-east-1, see ADR 0003) | `region` default in bootstrap and envs/dev |
 | 2 | ALB reachable only from the owner's public IP `/32` | `allowed_ingress_cidrs` (validated `/32`-only); **IP to be provided by the owner** |
 | 3 | CloudWatch alert e-mails + AWS Budget notifications | `alert_email` (SNS) and `budget_email` (Budgets); **address to be confirmed by the owner** |
 | 4 | Encrypted, versioned S3 remote state with locking, bootstrapped first | `terraform/bootstrap` (S3 + native lock file) |
@@ -27,7 +27,7 @@ $0.10/day and make the incident pipeline usable as soon as the alarms exist.
 
 | Service | Resources |
 |---|---|
-| S3 (state) | bucket `aiops-tfstate-<account>-us-east-1`, versioning, SSE-S3, Block Public Access, ownership controls (ACLs off), TLS-only bucket policy, lifecycle (7 resources) |
+| S3 (state) | bucket `aiops-tfstate-<account>-us-east-2`, versioning, SSE-S3, Block Public Access, ownership controls (ACLs off), TLS-only bucket policy, lifecycle (7 resources) |
 | IAM / OIDC | GitHub OIDC provider (skipped if one exists), roles `aiops-github-plan`, `aiops-github-apply`, `aiops-github-image-push` + 3 inline policies, permissions boundary `aiops-dev-workload-boundary` (8) |
 | ECR | repository `aiops-sample-app` (immutable tags, scan on push) + lifecycle policy (2) |
 | AWS Budgets | `aiops-account-monthly`, $30/month, 4 e-mail notifications (1) |
@@ -47,7 +47,7 @@ $0.10/day and make the incident pipeline usable as soon as the alarms exist.
 Not created: NAT gateway, Container Insights, VPC flow logs, ALB access logs, WAF, Bedrock access
 (all off by design; each is a variable).
 
-## Cost estimate (us-east-1 on-demand list prices, verify with the AWS Pricing Calculator)
+## Cost estimate (us-east-2 on-demand list prices, verify with the AWS Pricing Calculator)
 
 ### While `envs/dev` is running
 
@@ -96,11 +96,11 @@ All commands run from the repository root. 💲 = creates or changes billable AW
 ### 0. Confirm identity and region (read-only)
 
 ```bash
-aws sso login --profile aiops-admin
+aws login --profile aiops-dev --remote
 ```
 
 ```bash
-export AWS_PROFILE=aiops-admin AWS_REGION=us-east-1
+export AWS_PROFILE=aiops-dev AWS_REGION=us-east-2
 ```
 
 ```bash
@@ -148,7 +148,7 @@ terraform -chdir=terraform/bootstrap apply bootstrap.tfplan
 Move the bootstrap state into the bucket it just created:
 
 ```bash
-sed "s/aiops-tfstate-<account-id>-us-east-1/$(terraform -chdir=terraform/bootstrap output -raw state_bucket)/" terraform/bootstrap/backend.tf.example > terraform/bootstrap/backend.tf
+sed "s/aiops-tfstate-<account-id>-us-east-2/$(terraform -chdir=terraform/bootstrap output -raw state_bucket)/" terraform/bootstrap/backend.tf.example > terraform/bootstrap/backend.tf
 ```
 
 ```bash

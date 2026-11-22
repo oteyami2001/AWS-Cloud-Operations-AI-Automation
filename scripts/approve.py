@@ -77,7 +77,7 @@ def main() -> None:
     session = boto3.session.Session()
     creds = session.get_credentials().get_frozen_credentials()
     req = AWSRequest(method="POST", url=url, data=json.dumps(body), headers={"Content-Type": "application/json"})
-    SigV4Auth(creds, "lambda", session.region_name or "us-east-1").add_auth(req)
+    SigV4Auth(creds, "lambda", session.region_name or "us-east-2").add_auth(req)
     http_req = urllib.request.Request(url, data=req.body, headers=dict(req.headers), method="POST")  # noqa: S310
     try:
         with urllib.request.urlopen(http_req, timeout=30) as resp:  # nosec B310 - https Function URL

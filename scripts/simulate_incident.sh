@@ -47,6 +47,8 @@ case "${1:-}" in
   status)
     aws cloudwatch describe-alarms --alarm-name-prefix "${CLUSTER%-cluster}-" \
       --query 'MetricAlarms[].[AlarmName,StateValue]' --output table
+    # Backticks below are JMESPath string literals, not shell substitutions.
+    # shellcheck disable=SC2016
     aws dynamodb scan --table-name "$TABLE" \
       --projection-expression "incident_id, severity, #s, title" --expression-attribute-names '{"#s":"status"}' \
       --query 'Items[?starts_with(incident_id.S, `INC-`)].[incident_id.S, severity.S, #s.S, title.S]' \

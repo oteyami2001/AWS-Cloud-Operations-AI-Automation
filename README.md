@@ -1,5 +1,7 @@
 # AWS AIOps Cloud Operations Platform
 
+![AI recommends, humans approve: detect, analyze, approve, remediate](docs/images/aiops-thumbnail.png)
+
 **Detect infrastructure problems, investigate incidents automatically, explain probable causes with
 AI, and remediate safely, with a human approving every change.**
 
@@ -142,6 +144,18 @@ AWS_PROFILE=aiops-operator python scripts/approve.py --incident <INC-id> --decis
   done locally, what awaits deployment, and what is planned (HTTPS/WAF, drift and cost-anomaly
   incidents, Slack approvals, multi-account).
 - **Interview prep:** [`docs/interview-talking-points.md`](docs/interview-talking-points.md).
+
+## Live deployment (screenshots)
+
+Approval-gated deploy: the plan job runs with a read-only role, then the apply waits until the owner approves the `aws-dev` environment, and applies exactly the reviewed plan.
+
+![deploy run: plan, owner approval, apply succeeded](docs/evidence/github/deploy-apply-approved.png)
+
+All 8 CloudWatch alarms `OK` after the first deployment (ALB, ECS, SQS dead-letter queue, platform Lambda, app error metric):
+
+![CloudWatch alarms overview: 8 OK, 0 in alarm](docs/evidence/aws/alarms-ok.png)
+
+The full story, including every failure and its fix, is in [`docs/deployment-log.md`](docs/deployment-log.md).
 
 ## Evidence
 

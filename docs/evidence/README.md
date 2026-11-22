@@ -26,7 +26,7 @@ a baseline, not a capacity claim.
 - [ ] Downloaded `python-test-reports` artifact → `github/`
 - [ ] Checkov SARIF visible in the Security tab → `github/code-scanning.png`
 - [x] `deploy` workflow **plan** run summary (`81 to add`, run #5) → `github/deploy-plan.png`
-- [x] `deploy` **apply** paused for environment approval (runs #9, #10) → `github/deploy-approval.png`
+- [x] `deploy` **apply** approved and succeeded (run #10) → [`github/deploy-apply-approved.png`](github/deploy-apply-approved.png)
 
 ## C. AWS-deployed evidence (🟢 stack deployed; ⏸️ scenarios not yet run)
 
@@ -34,8 +34,8 @@ Store screenshots under `aws/`. A ticked box means the result was observed; add 
 Redact your public IP, e-mail and load balancer DNS name before committing screenshots.
 
 - [x] `terraform apply` summary (resources created; see [`../deployment-log.md`](../deployment-log.md)) → `aws/terraform-apply.txt`
-- [x] App healthy via ALB (`curl /health` → `{"status": "ok"}`) → `aws/app-healthy.png`
-- [x] All alarms OK (8/8) → `aws/alarms-ok.png`
+- [x] App healthy via ALB (`curl /health` → `{"status": "ok"}`) → [`aws/app-healthy.txt`](aws/app-healthy.txt)
+- [x] All alarms OK (8/8) → [`aws/alarms-ok.png`](aws/alarms-ok.png)
 - [ ] Scenario A: `no-healthy-targets` ALARM → `aws/scenarioA-alarm.png`
 - [ ] Scenario A: SNS e-mail with summary + recommendation → `aws/scenarioA-sns.png`
 - [ ] Scenario A: `approve.py --show` output → `aws/scenarioA-show.txt`

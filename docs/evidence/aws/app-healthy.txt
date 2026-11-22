@@ -1,0 +1,9 @@
+# Sample app health check through the ALB, run from the owner's allowed /32 (Windows PowerShell).
+# The load balancer DNS name is redacted.
+PS> curl.exe http://<app_url>/health
+{"status": "ok"}
+PS> Invoke-RestMethod http://<app_url>/health
+
+status
+------
+ok

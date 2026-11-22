@@ -37,6 +37,38 @@ Values that identify the owner (public IP, alert e-mail, load balancer DNS name)
 | Ingress | Plan review + output `alb_allowed_ingress_cidrs` | Single /32; the only `0.0.0.0/0` entries are the default route and task egress on 443 |
 | Bedrock | Variable `bedrock_enabled` | `false` (rules engine only, as decided for the first deployment) |
 
+## Scenario B: unhealthy task (run on 2026-11-22, Windows PowerShell)
+
+Fault injected with `POST /fault/unhealthy` (token from Secrets Manager), from the owner's allowed IP.
+
+| Time (UTC) | Observed |
+|---|---|
+| ~07:31 | `/health` returns 503 and the app logs `ERROR health check failing ...` on every health check |
+| 07:33:37 | `aiops-dev-app-errors` → ALARM (AppErrorCount > 5). Incident **`INC-20261122-90e9b024`, SEV2 `APPLICATION_ERRORS`** opened; SNS e-mail sent with summary, probable cause and recommendation `rollback-ecs-task-definition` (risk HIGH) |
+| ~07:34 | The load balancer marked the task unhealthy; **ECS replaced it by itself** (the new task starts without the fault) |
+| ~07:35 | Alarm back to OK; incident **auto-RESOLVED** (`RECOVERED`, by `system`); "RESOLVED" e-mail with **MTTR 118 s** |
+
+**What matched the design:** detection → incident → e-mail → dashboard → self-healing → auto-resolution, with no
+human action. The HIGH-risk rollback the rules engine recommended was **never executed**: remediation only runs
+after an explicit approval, and none was given.
+
+**What differed from the prediction (and why):**
+- The expected `unhealthy-targets` alarm did **not** fire. `UnHealthyHostCount` was 1 for a single minute,
+  because ECS replaced the task faster than the alarm's "2 datapoints within 2 minutes" window. The alarm
+  history shows only `Insufficient data → OK`.
+- The incident was classified **`APPLICATION_ERRORS`**, not an unhealthy-target incident, because the fault
+  also writes `ERROR` log lines, which drive the `app-errors` metric alarm. The classification follows the alarm
+  that fired; the recommendation (rollback, HIGH) was reasonable for that signal, but a human reviewing it
+  would see the evidence and the fact that it had already recovered.
+
+**Also visible on the dashboard:** a SEV1 `NO_HEALTHY_TARGETS` incident (`INC-20261122-91e4ad15`) at
+05:00:58 UTC, during the first apply, while the very first task was still starting. It auto-resolved as soon as
+the task became healthy. It is a deployment-time false positive (see follow-ups).
+
+Evidence: [`evidence/aws/scenarioB-sns-incident.png`](evidence/aws/scenarioB-sns-incident.png),
+[`scenarioB-sns-resolved.png`](evidence/aws/scenarioB-sns-resolved.png),
+[`scenarioB-alarms.png`](evidence/aws/scenarioB-alarms.png).
+
 ## Guardrails that held
 
 - **Approval gate:** the apply job runs only after the owner approves the `aws-dev` environment, and it applies the exact plan file that was reviewed.
@@ -59,5 +91,7 @@ pick `apply` → Run. The first job must be named `terraform plan (apply)`. When
 ## Open follow-ups
 
 - 📋 Make the Lambda zip reproducible (fixed timestamps and file order) so a no-change deploy shows `0 to change`.
-- 📋 Incident scenarios A, B and C against the deployed stack ([`demo-scenario.md`](demo-scenario.md)); evidence goes to [`evidence/README.md`](evidence/README.md).
+- 📋 Correlate health-check failures logged as `ERROR` with the target-health signal, so a failing `/health` is classified as an unhealthy-target incident rather than generic application errors.
+- 📋 Suppress `NO_HEALTHY_TARGETS` incidents while an ECS deployment is in progress (or delay the alarm until the service has reached steady state once).
+- ✅ Scenario B run (above). 📋 Scenarios A and C against the deployed stack ([`demo-scenario.md`](demo-scenario.md)); evidence goes to [`evidence/README.md`](evidence/README.md).
 - 📋 Bedrock (Phase 4) remains disabled until the owner approves it.

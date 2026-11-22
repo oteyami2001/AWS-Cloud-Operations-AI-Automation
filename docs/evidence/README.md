@@ -28,7 +28,7 @@ a baseline, not a capacity claim.
 - [x] `deploy` workflow **plan** run summary (`81 to add`, run #5) → `github/deploy-plan.png`
 - [x] `deploy` **apply** approved and succeeded (run #10) → [`github/deploy-apply-approved.png`](github/deploy-apply-approved.png)
 
-## C. AWS-deployed evidence (🟢 stack deployed; ⏸️ scenarios not yet run)
+## C. AWS-deployed evidence (🟢 stack deployed; ✅ Scenario B run; ⏸️ A and C not yet run)
 
 Store screenshots under `aws/`. A ticked box means the result was observed; add the screenshot file to complete it.
 Redact your public IP, e-mail and load balancer DNS name before committing screenshots.
@@ -41,7 +41,7 @@ Redact your public IP, e-mail and load balancer DNS name before committing scree
 - [ ] Scenario A: `approve.py --show` output → `aws/scenarioA-show.txt`
 - [ ] Scenario A: approval response + SSM execution succeeded → `aws/scenarioA-ssm.png`
 - [ ] Scenario A: incident `RESOLVED` with history on the dashboard → `aws/scenarioA-dashboard.png`
-- [ ] Scenario B: auto-resolved incident (self-healed) → `aws/scenarioB-dashboard.png`
+- [x] Scenario B: incident opened, self-healed and auto-resolved (MTTR 118 s) → [`aws/scenarioB-sns-incident.png`](aws/scenarioB-sns-incident.png), [`aws/scenarioB-sns-resolved.png`](aws/scenarioB-sns-resolved.png), [`aws/scenarioB-alarms.png`](aws/scenarioB-alarms.png); dashboard table → `aws/scenarioB-dashboard.png` (to add)
 - [ ] Scenario C: SSM execution waiting at `SecondApproval` → `aws/scenarioC-waiting.png`
 - [ ] Bedrock-generated analysis (`engine = bedrock:…`) → `aws/bedrock-analysis.png`
 - [ ] Bedrock fallback (access removed → `engine = rules` + rationale) → `aws/bedrock-fallback.png`

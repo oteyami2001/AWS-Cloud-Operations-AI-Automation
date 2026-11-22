@@ -16,7 +16,8 @@ AI, and remediate safely, with a human approving every change.**
 > | Code, Terraform, tests, CI workflows, docs | ✅ Complete, and verified **locally**: 60 Python tests at ≈93% coverage, 25 offline `terraform test` assertions, tflint, Checkov (0 failed) and Trivy (0 HIGH/CRITICAL). See [`docs/security-review.md`](docs/security-review.md) |
 > | Offline end-to-end incident simulation | ✅ [`docs/evidence/local/incident-simulation.md`](docs/evidence/local/incident-simulation.md) (mocked AWS) |
 > | AWS deployment (bootstrap + full dev stack, `us-east-2`) | 🟢 **Deployed and verified** through the approval-gated `deploy` workflow: 81 resources, `/health` OK, 8/8 alarms OK. Full record, including every failure and fix: [`docs/deployment-log.md`](docs/deployment-log.md) |
-> | Incident scenarios in AWS, Bedrock calls, ALB load test, video | ⏸️ Not yet run (Bedrock disabled by decision). Checklist: [`docs/evidence/README.md`](docs/evidence/README.md) |
+> | Incident scenarios in AWS | ✅ Scenario B (self-healing, auto-resolved, MTTR 118 s). ⏸️ A and C not yet run |
+> | Bedrock calls, ALB load test, video | ⏸️ Not yet run (Bedrock disabled by decision). Checklist: [`docs/evidence/README.md`](docs/evidence/README.md) |
 
 ---
 
@@ -155,6 +156,12 @@ All 8 CloudWatch alarms `OK` after the first deployment (ALB, ECS, SQS dead-lett
 
 ![CloudWatch alarms overview: 8 OK, 0 in alarm](docs/evidence/aws/alarms-ok.png)
 
+Scenario B (unhealthy task): the incident e-mail with the analysis and the recommended runbook, which is never run without approval; then the task self-healed and the incident auto-resolved with an MTTR of 118 s:
+
+![SNS incident e-mail: SEV2 APPLICATION_ERRORS with probable cause and recommended runbook](docs/evidence/aws/scenarioB-sns-incident.png)
+
+![SNS resolved e-mail: MTTR 118 seconds](docs/evidence/aws/scenarioB-sns-resolved.png)
+
 The full story, including every failure and its fix, is in [`docs/deployment-log.md`](docs/deployment-log.md).
 
 ## Evidence
@@ -164,4 +171,5 @@ The full story, including every failure and its fix, is in [`docs/deployment-log
 | Test reports, coverage, Terraform validation and tests, checkov, local simulation, local load test | `docs/evidence/local/` | ✅ |
 | Workflow runs (ci, image, approval-gated deploy) | GitHub Actions tab | ✅ |
 | First deployment record (timeline, root causes, fixes, verification) | [`docs/deployment-log.md`](docs/deployment-log.md) | ✅ |
-| AWS scenario screenshots, Bedrock output, ALB load test, cleanup proof, video | `docs/evidence/aws/` | ⏸️ scenarios not yet run |
+| AWS scenario screenshots | `docs/evidence/aws/` | ✅ Scenario B · ⏸️ A, C |
+| Bedrock output, ALB load test, cleanup proof, video | `docs/evidence/aws/` | ⏸️ not yet run |

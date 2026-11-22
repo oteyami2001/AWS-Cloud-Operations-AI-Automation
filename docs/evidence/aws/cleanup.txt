@@ -1,0 +1,11 @@
+# Teardown of the dev platform through the approval-gated `deploy` workflow (action = destroy)
+# Run #11 on main, 2026-11-22. Plan job (read-only role) 22:32 UTC, destroy approved in aws-dev, applied 22:35-22:39 UTC.
+
+module.workload.aws_lb.this: Destruction complete after 17s
+module.network.aws_internet_gateway.this: Destruction complete after 4m5s
+module.network.aws_vpc.this: Destruction complete after 0s
+
+Apply complete! Resources: 0 added, 0 changed, 81 destroyed.
+
+# Kept on purpose (terraform/bootstrap, about $0.01/month): S3 state bucket, GitHub OIDC provider
+# and roles, workload permissions boundary, ECR repository with image v1, AWS budget.

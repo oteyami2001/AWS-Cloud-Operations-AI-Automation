@@ -176,4 +176,5 @@ The full story, including every failure and its fix, is in [`docs/deployment-log
 | Workflow runs (ci, image, approval-gated deploy) | GitHub Actions tab | ✅ |
 | First deployment record (timeline, root causes, fixes, verification) | [`docs/deployment-log.md`](docs/deployment-log.md) | ✅ |
 | AWS scenario screenshots | `docs/evidence/aws/` | ✅ Scenario B · ⏸️ A, C |
-| Bedrock output, ALB load test, cleanup proof, video | `docs/evidence/aws/` | ⏸️ not yet run |
+| Cleanup proof (`destroy`: 81 resources removed) | [`docs/evidence/aws/cleanup.txt`](docs/evidence/aws/cleanup.txt) | ✅ |
+| Bedrock output, ALB load test, video | `docs/evidence/aws/` | ⏸️ not yet run |

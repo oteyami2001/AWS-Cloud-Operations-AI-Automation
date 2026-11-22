@@ -89,6 +89,17 @@ pick `apply` → Run. The first job must be named `terraform plan (apply)`. When
 **Windows operators.** The helper scripts are bash. PowerShell equivalents are in
 [`runbooks/windows-powershell.md`](runbooks/windows-powershell.md).
 
+## Teardown
+
+Deploy run #11 (`destroy`) removed all 81 platform resources on 2026-11-22 at 22:39 UTC:
+`Apply complete! Resources: 0 added, 0 changed, 81 destroyed.` ([`evidence/aws/cleanup.txt`](evidence/aws/cleanup.txt)).
+The bootstrap stays (about $0.01/month), so the platform can be re-deployed with one approved run.
+
+**Lesson:** the destroy waited about 13 hours in the queue. An old re-run of apply #9 was still waiting
+for approval and held the workflow's `deploy-dev` concurrency group (one deploy at a time). Cancelling the
+stale run released the queue. Cancel any run you do not intend to approve; never approve a re-run of an
+old plan.
+
 ## Open follow-ups
 
 - 📋 Make the Lambda zip reproducible (fixed timestamps and file order) so a no-change deploy shows `0 to change`.

@@ -47,5 +47,5 @@ Redact your public IP, e-mail and load balancer DNS name before committing scree
 - [ ] Bedrock fallback (access removed → `engine = rules` + rationale) → `aws/bedrock-fallback.png`
 - [ ] Load test against the ALB + CPU alarm / dashboard during the test → `load-tests/alb-*.md`, `aws/load-test-dashboard.png`
 - [ ] CloudTrail event showing `StartAutomationExecution` by the approval role → `aws/cloudtrail.png`
-- [ ] `terraform destroy` complete + tag query empty → `aws/cleanup.txt`
+- [x] `terraform destroy` complete (81 destroyed, run #11) → [`aws/cleanup.txt`](aws/cleanup.txt). 📋 Tag query not yet run
 - [ ] Demo video (≈ 6 min, script in `docs/demo-scenario.md`) → link here: _TBD_

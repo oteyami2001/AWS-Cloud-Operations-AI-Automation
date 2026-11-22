@@ -13,7 +13,8 @@ AI, and remediate safely, with a human approving every change.**
 > |---|---|
 > | Code, Terraform, tests, CI workflows, docs | ✅ Complete, and verified **locally**: 60 Python tests at ≈93% coverage, 25 offline `terraform test` assertions, tflint, Checkov (0 failed) and Trivy (0 HIGH/CRITICAL). See [`docs/security-review.md`](docs/security-review.md) |
 > | Offline end-to-end incident simulation | ✅ [`docs/evidence/local/incident-simulation.md`](docs/evidence/local/incident-simulation.md) (mocked AWS) |
-> | AWS deployment, screenshots, Bedrock calls, ALB load test, video | ⏸️ **Not yet deployed.** The deployment plan is ready ([`docs/deployment-plan.md`](docs/deployment-plan.md)) and waits for the owner's approval (billable). Checklist: [`docs/evidence/README.md`](docs/evidence/README.md) |
+> | AWS deployment (bootstrap + full dev stack, `us-east-2`) | 🟢 **Deployed and verified** through the approval-gated `deploy` workflow: 81 resources, `/health` OK, 8/8 alarms OK. Full record, including every failure and fix: [`docs/deployment-log.md`](docs/deployment-log.md) |
+> | Incident scenarios in AWS, Bedrock calls, ALB load test, video | ⏸️ Not yet run (Bedrock disabled by decision). Checklist: [`docs/evidence/README.md`](docs/evidence/README.md) |
 
 ---
 
@@ -92,7 +93,7 @@ rollback waiting for a second approval.
 
 See [`docs/deployment-plan.md`](docs/deployment-plan.md): the bootstrap (state, OIDC roles, ECR, budget), image publish, plan, the approval-gated apply,
 operator profiles, and how to enable Bedrock. Then follow the demo script in
-[`docs/demo-scenario.md`](docs/demo-scenario.md) and clean up with [`docs/cleanup.md`](docs/cleanup.md).
+[`docs/demo-scenario.md`](docs/demo-scenario.md) (Windows: [`docs/runbooks/windows-powershell.md`](docs/runbooks/windows-powershell.md)) and clean up with [`docs/cleanup.md`](docs/cleanup.md).
 
 ```bash
 scripts/simulate_incident.sh stop
@@ -147,5 +148,6 @@ AWS_PROFILE=aiops-operator python scripts/approve.py --incident <INC-id> --decis
 | Kind | Where | Status |
 |---|---|---|
 | Test reports, coverage, Terraform validation and tests, checkov, local simulation, local load test | `docs/evidence/local/` | ✅ |
-| Workflow runs | GitHub Actions tab | ⏳ after push |
-| AWS screenshots, Bedrock output, ALB load test, cleanup proof, video | `docs/evidence/aws/` | ⏸️ after approved deployment |
+| Workflow runs (ci, image, approval-gated deploy) | GitHub Actions tab | ✅ |
+| First deployment record (timeline, root causes, fixes, verification) | [`docs/deployment-log.md`](docs/deployment-log.md) | ✅ |
+| AWS scenario screenshots, Bedrock output, ALB load test, cleanup proof, video | `docs/evidence/aws/` | ⏸️ scenarios not yet run |

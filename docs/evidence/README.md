@@ -19,22 +19,23 @@ recorded evidence and the rules engine; it proves the logic, not AWS wiring. The
 measures one Python process on a shared CI container (p99 includes connection-setup outliers); it is
 a baseline, not a capacity claim.
 
-## B. GitHub Actions evidence (⏳ after you push / run workflows)
+## B. GitHub Actions evidence (✅ workflows have run; save screenshots to `github/`)
 
-- [ ] Screenshot of a green `ci` run (all 4 jobs) on the PR → `github/ci-run.png`
-- [ ] `image` workflow run (Trivy gate + pushed digest) → `github/image-run.png`
+- [x] Screenshot of a green `ci` run (all 4 jobs) on the PR → `github/ci-run.png`
+- [x] `image` workflow run (Trivy gate + pushed digest) → `github/image-run.png`
 - [ ] Downloaded `python-test-reports` artifact → `github/`
 - [ ] Checkov SARIF visible in the Security tab → `github/code-scanning.png`
-- [ ] `deploy` workflow **plan** run summary → `github/deploy-plan.png`
-- [ ] `deploy` **apply** paused for environment approval → `github/deploy-approval.png`
+- [x] `deploy` workflow **plan** run summary (`81 to add`, run #5) → `github/deploy-plan.png`
+- [x] `deploy` **apply** paused for environment approval (runs #9, #10) → `github/deploy-approval.png`
 
-## C. AWS-deployed evidence (⏸️ requires your approval to deploy)
+## C. AWS-deployed evidence (🟢 stack deployed; ⏸️ scenarios not yet run)
 
-Store screenshots under `aws/` (redact account ids if you prefer).
+Store screenshots under `aws/`. A ticked box means the result was observed; add the screenshot file to complete it.
+Redact your public IP, e-mail and load balancer DNS name before committing screenshots.
 
-- [ ] `terraform apply` summary (resources created) → `aws/terraform-apply.txt`
-- [ ] App healthy via ALB (`curl /health`) → `aws/app-healthy.png`
-- [ ] All alarms OK → `aws/alarms-ok.png`
+- [x] `terraform apply` summary (resources created; see [`../deployment-log.md`](../deployment-log.md)) → `aws/terraform-apply.txt`
+- [x] App healthy via ALB (`curl /health` → `{"status": "ok"}`) → `aws/app-healthy.png`
+- [x] All alarms OK (8/8) → `aws/alarms-ok.png`
 - [ ] Scenario A: `no-healthy-targets` ALARM → `aws/scenarioA-alarm.png`
 - [ ] Scenario A: SNS e-mail with summary + recommendation → `aws/scenarioA-sns.png`
 - [ ] Scenario A: `approve.py --show` output → `aws/scenarioA-show.txt`

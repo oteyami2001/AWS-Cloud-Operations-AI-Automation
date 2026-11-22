@@ -165,7 +165,7 @@ run "ingress_rejects_malformed_address" {
   expect_failures = [var.allowed_ingress_cidrs]
 }
 
-# CI variables can carry stray whitespace (seen in deploy run #2: "oteyami2001@gmail.com ").
+# CI variables can carry stray whitespace (seen in deploy run #2: a trailing space after the address).
 # The root trims it before the monitoring module validates the address.
 run "alert_email_with_trailing_space_is_accepted" {
   command = plan

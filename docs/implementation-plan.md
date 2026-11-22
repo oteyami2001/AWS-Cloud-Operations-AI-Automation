@@ -1,28 +1,28 @@
 # Phased implementation plan
 
-Status legend: ✅ **Done locally** (code + automated tests, no AWS) · ⏸️ **Awaiting your approval to
-deploy** (billable) · 📋 **Planned**.
+Status legend: ✅ **Done locally** (code + automated tests, no AWS) · 🟢 **Deployed and verified in AWS** ·
+⏸️ **Awaiting your approval / not yet exercised in AWS** · 📋 **Planned**.
 
-Nothing has been deployed to AWS. Each ⏸️ phase starts only after you confirm.
+The first deployment (bootstrap + full dev stack, Bedrock off) is live in `us-east-2`. The step-by-step
+record, including every failure and fix, is in [`deployment-log.md`](deployment-log.md).
 
 | Phase | Scope | Local status | AWS status | Exit criteria |
 |---|---|---|---|---|
 | 0 | ADR, architecture, repo structure, prerequisites, cost & security estimates | ✅ | n/a | Docs reviewed |
-| 1 | Monitored sample workload (VPC, ECS Fargate, ALB, ECR, KMS, secret) | ✅ `terraform validate` + mocked `terraform test` | ⏸️ | `curl $APP_URL/health` → 200 |
-| 2 | Alarms (CPU, memory, 5xx, app errors, unhealthy / no healthy targets) + EventBridge routing + DLQ | ✅ | ⏸️ | Alarms in `OK`; rules show invocations |
-| 3 | Incident analyzer (evidence, dedupe, severity, rules engine, DynamoDB, SNS) | ✅ 60 unit/integration tests | ⏸️ | Scenario B creates and auto-resolves an incident |
-| 4 | Bedrock-assisted root cause summaries (opt-in) | ✅ tested with a fake client | ⏸️ needs Bedrock model access | Incident `engine = bedrock:…`; fallback proven by disabling access |
-| 5 | Human-approved remediation (4 SSM runbooks, approval Function URL, 2-person rule) | ✅ | ⏸️ | Scenario A restored via approved runbook; Scenario C waits at `aws:approve` |
-| 6 | Operations dashboard (custom widget + metrics) | ✅ render tested | ⏸️ | Dashboard screenshot shows incident table |
-| 7 | Automated testing + CI/CD (GitHub Actions, OIDC, plan/apply split, image pipeline) | ✅ CI fixed + hardened (SHA-pinned actions); 25 offline Terraform tests | ⏸️ bootstrap (OIDC roles, state, ECR, budget) | Green `ci` on the PR; `deploy` plan run from `main` |
-| 8 | Observability of the platform itself (EMF metrics, MTTR, analyzer/DLQ alarms, X-Ray) | ✅ | ⏸️ | Metrics visible on dashboard |
+| 1 | Monitored sample workload (VPC, ECS Fargate, ALB, ECR, KMS, secret) | ✅ `terraform validate` + mocked `terraform test` | 🟢 `/health` → 200 via ALB from the owner's /32 | `curl $APP_URL/health` → 200 |
+| 2 | Alarms (CPU, memory, 5xx, app errors, unhealthy / no healthy targets) + EventBridge routing + DLQ | ✅ | 🟢 8/8 alarms `OK` | Alarms in `OK`; rules show invocations |
+| 3 | Incident analyzer (evidence, dedupe, severity, rules engine, DynamoDB, SNS) | ✅ 60 unit/integration tests | 🟢 deployed; ⏸️ Scenario B not yet run | Scenario B creates and auto-resolves an incident |
+| 4 | Bedrock-assisted root cause summaries (opt-in) | ✅ tested with a fake client | ⏸️ disabled by decision; needs Bedrock model access | Incident `engine = bedrock:…`; fallback proven by disabling access |
+| 5 | Human-approved remediation (4 SSM runbooks, approval Function URL, 2-person rule) | ✅ | 🟢 deployed; ⏸️ Scenarios A and C not yet run | Scenario A restored via approved runbook; Scenario C waits at `aws:approve` |
+| 6 | Operations dashboard (custom widget + metrics) | ✅ render tested | 🟢 dashboard live (incident table awaits first incident) | Dashboard screenshot shows incident table |
+| 7 | Automated testing + CI/CD (GitHub Actions, OIDC, plan/apply split, image pipeline) | ✅ CI fixed + hardened (SHA-pinned actions); 25 offline Terraform tests | 🟢 bootstrap applied; `image` + approval-gated `deploy` (plan → apply) used for the live stack | Green `ci` on the PR; `deploy` plan run from `main` |
+| 8 | Observability of the platform itself (EMF metrics, MTTR, analyzer/DLQ alarms, X-Ray) | ✅ | 🟢 deployed; ⏸️ metrics appear with the first incidents | Metrics visible on dashboard |
 | 9 | Evidence capture, load test, demo video, cleanup | ✅ local evidence | ⏸️ | `docs/evidence/` checklist complete; `terraform destroy` clean |
 
-## Next approved step
+## Next step
 
-The first deployment (bootstrap + Phases 1–2) is fully specified in
-[`deployment-plan.md`](deployment-plan.md), with its resource list, cost, commands and validation.
-It waits for the owner's explicit approval.
+Run the incident scenarios against the live stack (B, then A, then C) and capture the evidence listed
+in [`evidence/README.md`](evidence/README.md). Windows operators: [`runbooks/windows-powershell.md`](runbooks/windows-powershell.md).
 
 ## Phase-by-phase deployment (when you approve)
 

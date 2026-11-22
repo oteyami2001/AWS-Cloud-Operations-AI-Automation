@@ -102,6 +102,20 @@ data "aws_iam_policy_document" "plan" {
 
   # Refreshing aws_secretsmanager_secret_version reads the version via GetSecretValue. Scoped to the
   # demo fault-injection token only, decrypted only through Secrets Manager.
+  # The fault token is an EPHEMERAL value (aws_secretsmanager_random_password), opened during plan
+  # as well as apply. GetRandomPassword only returns a random string: it reads/writes no secret and
+  # does not support resource-level permissions.
+  statement {
+    sid       = "GenerateEphemeralRandomPassword"
+    actions   = ["secretsmanager:GetRandomPassword"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = [var.region]
+    }
+  }
+
   statement {
     sid       = "RefreshDemoFaultTokenVersion"
     actions   = ["secretsmanager:GetSecretValue"]

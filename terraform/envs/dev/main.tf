@@ -70,7 +70,7 @@ module "monitoring" {
   app_log_group_name      = module.workload.app_log_group_name
   analyzer_function_name  = local.analyzer_function_name
   dlq_name                = "${local.name_prefix}-events-dlq"
-  alert_email             = var.alert_email
+  alert_email             = trimspace(var.alert_email) # tolerate stray spaces from CI variables
 }
 
 module "remediation" {

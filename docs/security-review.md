@@ -237,3 +237,29 @@ The classic format is still available by setting the variable to `false`.
 (`aiops-github-plan`, `-apply`, `-image-push`). Nothing is created or destroyed. Because the gated
 resume script only accepts additions, this change is applied with a direct, reviewed plan/apply.
 
+
+## 9. Addendum 2026-11-22: first CI plan was a masked failure
+
+**Symptom:** deploy run #2 showed green with `Plan: 79 to add`, but 81 resources were expected. The
+missing two were `aws_sns_topic_subscription.email[0]` and `aws_secretsmanager_secret_version.fault_token`.
+
+**Root cause (from the job log):** Terraform **failed** with 2 errors, printed a partial plan, and exited
+non-zero. The step still passed because `terraform plan … | tee plan.txt` ran without `pipefail`.
+
+1. `alert_email must be empty or a valid e-mail address`: the `ALERT_EMAIL` repository variable
+   had a trailing space.
+2. `aiops-github-plan … not authorized to perform: secretsmanager:GetRandomPassword`: the ephemeral
+   fault token (`aws_secretsmanager_random_password`) is opened during **plan**. The plan role lacked
+   this action; the apply role already had it via `secretsmanager:*`.
+
+**Fixes:**
+
+- `defaults.run.shell: bash` in all workflows, so every step runs with `-eo pipefail`;
+- plan role: `secretsmanager:GetRandomPassword`, limited to the deployment region (returns a random
+  string; reads or writes no stored secret);
+- `envs/dev`: `alert_email` is trimmed and validated at the root.
+
+**Tests:** `plan_role_can_open_ephemeral_fault_token`, `alert_email_with_trailing_space_is_accepted`,
+`invalid_alert_email_still_rejected`.
+
+**Lesson:** a resource count that doesn't match expectations is a stop signal, even on a green run.
